@@ -1,0 +1,563 @@
+model_name: uncrustables_event_alerts_overlay
+purpose: Scenario and alert overlay file. Simulation engine applies patches to BAU graph KPIs and relationship lead times/costs, runs
+  scenario, and stores impact/recommendation.
+applies_to_bau_graph: uncrustables_bau_graph_cost_enriched.yaml
+time_grain: daily_for_tactical_alerts_weekly_for_long_term_alerts
+overlay_semantics:
+  do_not_mutate_bau_file: true
+  simulation_step: copy_BAU_graph_to_scenario_graph_then_apply_event_overlay_patches
+  patch_matching: target_type_plus_target_id_plus_metric_name_or_path
+  cost_impact_convention: incremental_cost_vs_BAU_for_modeled_event_horizon
+  recommended_output: rank_interventions_by_OTIF_recovery_inventory_risk_and_incremental_cost
+events:
+- id: LT_001_peanut_price_weather_supply_risk
+  event_horizon: long_term
+  event_type: raw_material_price_and_capacity_risk
+  status: forecast_watch
+  trigger_window:
+    expected_start_in_days: 180
+    expected_duration_days: 90
+    planning_bucket: monthly_then_weekly_after_90_days
+  business_question: Should we forward-buy peanuts or shift allocation before weather-driven peanut inflation reaches supplier contracts?
+  signal_sources:
+  - system: external_news_and_weather_intelligence
+    events:
+    - bad_weather_report_in_peanut_source_regions
+    - crop_yield_outlook_revision
+  - system: commodity_procurement_workbench
+    events:
+    - peanut_forward_price_update
+    - supplier_quote_revision
+  - system: SRM_supplier_portal
+    events:
+    - supplier_capacity_advisory
+    - contract_reopener_notice
+  affected_model_objects:
+    nodes:
+    - supplier_peanuts_southeast_contract
+    - supplier_peanuts_regional_fast_response
+    - inventory_peanut_receiving
+    - processing_peanut_butter_network
+    relationships:
+    - rel_peanut_contract_to_peanut_inventory
+    - rel_peanut_fast_to_peanut_inventory
+    - rel_peanut_inventory_to_peanut_butter_processing
+  overlay_patches:
+  - target_type: node
+    target_id: supplier_peanuts_southeast_contract
+    metric: contract_peanut_cost_usd_per_lb
+    baseline_value: 0.82
+    scenario_value: 1.02
+    operation: replace
+  - target_type: node
+    target_id: supplier_peanuts_southeast_contract
+    metric: contracted_peanut_capacity_lb_per_week
+    baseline_value: 720000
+    scenario_value: 610000
+    operation: replace
+  - target_type: node
+    target_id: supplier_peanuts_regional_fast_response
+    metric: emergency_peanut_cost_usd_per_lb
+    baseline_value: 0.96
+    scenario_value: 1.22
+    operation: replace
+  - target_type: node
+    target_id: supplier_peanuts_regional_fast_response
+    metric: spot_peanut_available_capacity_lb_per_week
+    baseline_value: 250000
+    scenario_value: 185000
+    operation: replace
+  - target_type: relationship
+    target_id: rel_peanut_contract_to_peanut_inventory
+    path: lead_time.modeled_mean_days
+    baseline_value: 8
+    scenario_value: 12
+    operation: replace
+  - target_type: relationship
+    target_id: rel_peanut_contract_to_peanut_inventory
+    path: lead_time.modeled_p90_days
+    baseline_value: 12
+    scenario_value: 18
+    operation: replace
+  - target_type: node
+    target_id: inventory_peanut_receiving
+    metric: peanut_days_of_cover
+    baseline_value: 12
+    scenario_value: 8
+    operation: replace
+  scenario_assumptions:
+    weekly_peanut_requirement_lb: 970000
+    affected_weeks: 12
+    expected_cost_increase_usd_per_lb_weighted: 0.21
+    capacity_shortfall_lb_per_week: 175000
+  estimated_no_action_impact:
+    incremental_raw_material_cost_usd: 2444000
+    shortfall_recovery_or_emergency_buy_cost_usd: 945000
+    additional_storage_or_quality_hold_cost_usd: 180000
+    total_incremental_cost_usd: 3569000
+    service_risk: medium_high
+  candidate_interventions:
+  - id: forward_buy_8_weeks_peanuts
+    action_type: forward_buy
+    expected_effect: lock_pre_increase_price_for_8_weeks_and_raise_peanut_inventory_cover_from_12_to_20_days
+    incremental_cost_usd: 620000
+    working_capital_cost_usd: 210000
+    risk: quality_ageing_and_storage_capacity
+  - id: shift_20_pct_to_regional_fast_supplier
+    action_type: supplier_allocation_shift
+    expected_effect: reduce capacity shortfall but increase unit cost
+    incremental_cost_usd: 510000
+    risk: higher_spot_cost
+  - id: hedge_or_contract_extension
+    action_type: commercial_mitigation
+    expected_effect: cap price exposure with procurement contract terms
+    incremental_cost_usd: 140000
+    risk: supplier_acceptance
+  recommended_intervention_id: forward_buy_8_weeks_peanuts
+  estimated_recommended_net_impact_usd: 1040000
+  simulation_instruction: Run weekly scenario for 12 affected weeks; compare no_action vs forward_buy vs allocation_shift on peanut
+    cover, peanut butter output, sandwich production continuity, and incremental cost.
+- id: LT_002_fruit_base_crop_yield_pressure
+  event_horizon: long_term
+  event_type: fruit_base_price_capacity_risk
+  status: forecast_watch
+  trigger_window:
+    expected_start_in_days: 240
+    expected_duration_days: 84
+    planning_bucket: monthly_then_weekly_after_120_days
+  business_question: Should the network lock fruit base supply early or move more volume to the fast-response supplier?
+  signal_sources:
+  - system: external_weather_and_crop_intelligence
+    events:
+    - fruit_region_drought_report
+    - crop_yield_downgrade
+  - system: SRM_supplier_portal
+    events:
+    - supplier_allocation_warning
+    - supplier_quote_revision
+  - system: ERP_purchasing
+    events:
+    - purchase_price_variance_trend
+    - contract_price_condition_change
+  affected_model_objects:
+    nodes:
+    - supplier_fruit_west_bulk
+    - supplier_fruit_midwest_fast_response
+    - inventory_fruit_base_receiving
+    - processing_fruit_spread_network
+    relationships:
+    - rel_fruit_bulk_to_fruit_inventory
+    - rel_fruit_fast_to_fruit_inventory
+    - rel_fruit_inventory_to_fruit_spread_processing
+  overlay_patches:
+  - target_type: node
+    target_id: supplier_fruit_west_bulk
+    metric: bulk_fruit_base_cost_usd_per_lb
+    baseline_value: 0.64
+    scenario_value: 0.82
+    operation: replace
+  - target_type: node
+    target_id: supplier_fruit_west_bulk
+    metric: bulk_fruit_base_capacity_lb_per_week
+    baseline_value: 390000
+    scenario_value: 300000
+    operation: replace
+  - target_type: node
+    target_id: supplier_fruit_midwest_fast_response
+    metric: short_cycle_fruit_base_cost_usd_per_lb
+    baseline_value: 0.78
+    scenario_value: 0.93
+    operation: replace
+  - target_type: relationship
+    target_id: rel_fruit_bulk_to_fruit_inventory
+    path: lead_time.modeled_mean_days
+    baseline_value: 9
+    scenario_value: 14
+    operation: replace
+  - target_type: node
+    target_id: inventory_fruit_base_receiving
+    metric: fruit_base_days_of_cover
+    baseline_value: 18
+    scenario_value: 11
+    operation: replace
+  scenario_assumptions:
+    weekly_fruit_base_requirement_lb: 720000
+    affected_weeks: 12
+    expected_cost_increase_usd_per_lb_weighted: 0.17
+    capacity_shortfall_lb_per_week: 90000
+  estimated_no_action_impact:
+    incremental_raw_material_cost_usd: 1469000
+    emergency_supplier_and_expedite_cost_usd: 410000
+    fruit_spread_output_risk_cost_usd: 260000
+    total_incremental_cost_usd: 2139000
+    service_risk: medium
+  candidate_interventions:
+  - id: forward_buy_6_weeks_fruit_base
+    action_type: forward_buy
+    incremental_cost_usd: 390000
+    risk: higher_ageing_and_cold_storage_cost
+  - id: prequalify_secondary_midwest_capacity
+    action_type: supplier_capacity_reservation
+    incremental_cost_usd: 220000
+    risk: reservation_fee_may_not_be_used
+  - id: reformulate_supplier_mix_with_approved_equivalent
+    action_type: BOM_sourcing_flex
+    incremental_cost_usd: 160000
+    risk: requires_QMS_and_R_and_D_approval
+  recommended_intervention_id: prequalify_secondary_midwest_capacity
+  estimated_recommended_net_impact_usd: 730000
+  simulation_instruction: Run weekly fruit base availability and fruit spread output scenario; test cost/service impact of reservation
+    vs forward buy vs no action.
+- id: LT_003_packaging_resin_and_paperboard_inflation
+  event_horizon: long_term
+  event_type: packaging_cost_and_capacity_risk
+  status: forecast_watch
+  trigger_window:
+    expected_start_in_days: 150
+    expected_duration_days: 112
+    planning_bucket: monthly_then_weekly_after_90_days
+  business_question: Should the business buy ahead film wrap/cartons or reserve converter capacity before cost increase?
+  signal_sources:
+  - system: external_market_intelligence
+    events:
+    - resin_price_increase_report
+    - paperboard_allocation_notice
+  - system: supplier_portal
+    events:
+    - converter_lead_time_extension
+    - minimum_order_quantity_change
+  - system: ERP_purchasing
+    events:
+    - purchase_price_variance
+    - contract_price_update
+  affected_model_objects:
+    nodes:
+    - supplier_film_wrap_converter
+    - supplier_carton_corrugate_converter
+    - inventory_packaging_receiving
+    relationships:
+    - rel_film_to_packaging_inventory
+    - rel_carton_to_packaging_inventory
+    - rel_packaging_to_scottsville
+  overlay_patches:
+  - target_type: node
+    target_id: supplier_film_wrap_converter
+    metric: wrapper_cost_usd_per_1000_units
+    baseline_value: 6.5
+    scenario_value: 7.9
+    operation: replace
+  - target_type: node
+    target_id: supplier_carton_corrugate_converter
+    metric: carton_cost_usd_per_1000_units
+    baseline_value: 210
+    scenario_value: 242
+    operation: replace
+  - target_type: relationship
+    target_id: rel_film_to_packaging_inventory
+    path: lead_time.modeled_mean_days
+    baseline_value: 6
+    scenario_value: 10
+    operation: replace
+  - target_type: relationship
+    target_id: rel_carton_to_packaging_inventory
+    path: lead_time.modeled_mean_days
+    baseline_value: 7
+    scenario_value: 12
+    operation: replace
+  - target_type: node
+    target_id: inventory_packaging_receiving
+    metric: packaging_days_of_cover
+    baseline_value: 21
+    scenario_value: 14
+    operation: replace
+  scenario_assumptions:
+    weekly_wrapper_requirement_units: 28850000
+    weekly_carton_requirement_units: 2885000
+    affected_weeks: 16
+  estimated_no_action_impact:
+    incremental_wrapper_cost_usd: 646240
+    incremental_carton_cost_usd: 1477120
+    expedite_or_shortfall_avoidance_cost_usd: 280000
+    total_incremental_cost_usd: 2403360
+    service_risk: medium
+  candidate_interventions:
+  - id: forward_buy_10_weeks_packaging
+    action_type: forward_buy
+    incremental_cost_usd: 520000
+    risk: artwork_obsolescence_and_warehouse_space
+  - id: dual_source_carton_converter
+    action_type: supplier_dual_sourcing
+    incremental_cost_usd: 310000
+    risk: quality_and_print_registration_approval
+  - id: reserve_converter_capacity
+    action_type: capacity_reservation
+    incremental_cost_usd: 180000
+    risk: reservation_underutilization
+  recommended_intervention_id: reserve_converter_capacity
+  estimated_recommended_net_impact_usd: 610000
+  simulation_instruction: Run 16-week packaging availability and cost overlay; test forward buy storage/obsolescence risk against capacity
+    reservation and dual sourcing.
+- id: TAC_001_late_reefer_to_walmart_sams_dc
+  event_horizon: tactical
+  event_type: finished_goods_shipment_delay_OTIF_risk
+  status: active_alert
+  trigger_window:
+    expected_start_in_days: 2
+    expected_duration_days: 3
+    planning_bucket: daily
+  business_question: "Do we expedite or replace a delayed frozen shipment to avoid OTIF fines at Walmart/Sam\u2019s DC?"
+  signal_sources:
+  - system: TMS_carrier_tracking
+    events:
+    - ETA_slippage
+    - missed_checkpoint_scan
+  - system: EDI_214_transportation_status
+    events:
+    - delayed_in_transit_status
+  - system: ERP_customer_order_management
+    events:
+    - customer_requested_delivery_date
+    - open_delivery_schedule_line
+  affected_model_objects:
+    nodes:
+    - cold_dc_central
+    - retailer_dc_walmart_sams
+    - frozen_inventory_scottsville
+    relationships:
+    - rel_central_dc_to_walmart_sams
+    - rel_scottsville_fg_to_central_dc
+  overlay_patches:
+  - target_type: relationship
+    target_id: rel_central_dc_to_walmart_sams
+    path: lead_time.modeled_mean_days
+    baseline_value: 2
+    scenario_value: 4.5
+    operation: replace
+  - target_type: relationship
+    target_id: rel_central_dc_to_walmart_sams
+    path: lead_time.modeled_p90_days
+    baseline_value: 3
+    scenario_value: 5.5
+    operation: replace
+  - target_type: node
+    target_id: retailer_dc_walmart_sams
+    metric: projected_OTIF_risk_pct
+    baseline_value: 6
+    scenario_value: 42
+    operation: replace
+  - target_type: node
+    target_id: cold_dc_central
+    metric: available_recovery_cases
+    baseline_value: 42000
+    scenario_value: 30000
+    operation: replace
+  scenario_assumptions:
+    affected_cases: 41000
+    retailer_penalty_usd_per_late_case: 3.25
+    gross_margin_risk_usd_per_unfulfilled_case: 5.1
+    expedite_reefer_multiplier: 2.15
+  estimated_no_action_impact:
+    OTIF_penalty_usd: 133250
+    lost_service_margin_risk_usd: 209100
+    deduction_admin_cost_usd: 12000
+    total_incremental_cost_usd: 354350
+    service_risk: high
+  candidate_interventions:
+  - id: expedite_current_reefer
+    action_type: transport_expedite
+    expected_effect: recover_1_5_days_of_delay
+    incremental_cost_usd: 46000
+    projected_OTIF_recovery_pct: 72
+    residual_risk: medium
+  - id: ship_replacement_from_southeast_dc
+    action_type: replacement_shipment
+    expected_effect: cover_33000_cases_before_RDD
+    incremental_cost_usd: 89000
+    projected_OTIF_recovery_pct: 90
+    residual_risk: low
+  - id: split_replacement_central_and_southeast_dc
+    action_type: split_reallocation
+    expected_effect: cover_39000_cases_before_RDD
+    incremental_cost_usd: 112000
+    projected_OTIF_recovery_pct: 96
+    residual_risk: low
+  recommended_intervention_id: split_replacement_central_and_southeast_dc
+  estimated_recommended_net_impact_usd: 112000
+  simulation_instruction: Run daily 5-day shipment and retailer DC cover simulation; compare no_action, expedite, replacement, and split
+    reallocation.
+- id: TAC_002_mccalla_line_downtime_capacity_loss
+  event_horizon: tactical
+  event_type: plant_capacity_loss
+  status: active_alert
+  trigger_window:
+    expected_start_in_days: 1
+    expected_duration_days: 5
+    planning_bucket: daily
+  business_question: Should we reallocate production to Longmont/Scottsville and draw down McCalla frozen inventory to protect Southeast
+    shipments?
+  signal_sources:
+  - system: MES_line_monitoring
+    events:
+    - unplanned_line_stop
+    - OEE_drop
+  - system: CMMS_maintenance_system
+    events:
+    - critical_work_order_opened
+    - estimated_repair_time_update
+  - system: APS_production_plan
+    events:
+    - capacity_exception
+    - missed_production_sequence
+  affected_model_objects:
+    nodes:
+    - plant_mccalla_frozen_sandwich
+    - frozen_inventory_mccalla
+    - cold_dc_southeast
+    - retailer_dc_walmart_sams
+    relationships:
+    - rel_mccalla_to_fg_inventory
+    - rel_mccalla_fg_to_southeast_dc
+    - rel_southeast_dc_to_walmart_sams
+  overlay_patches:
+  - target_type: node
+    target_id: plant_mccalla_frozen_sandwich
+    metric: weekly_production_capacity_sandwiches
+    baseline_value: 7250000
+    scenario_value: 5945000
+    operation: replace
+  - target_type: node
+    target_id: plant_mccalla_frozen_sandwich
+    metric: plant_utilization_pct
+    baseline_value: 83
+    scenario_value: 62
+    operation: replace
+  - target_type: node
+    target_id: frozen_inventory_mccalla
+    metric: frozen_fg_days_of_cover
+    baseline_value: 8
+    scenario_value: 5.1
+    operation: replace
+  - target_type: node
+    target_id: plant_mccalla_frozen_sandwich
+    metric: unplanned_downtime_cost_usd_per_hour
+    baseline_value: 17600
+    scenario_value: 17600
+    operation: use_for_costing
+  scenario_assumptions:
+    lost_production_sandwiches: 1305000
+    sandwiches_per_case: 48
+    affected_cases_equivalent: 27188
+    downtime_hours: 42
+    overtime_recovery_cost_usd_per_sandwich: 0.014
+  estimated_no_action_impact:
+    downtime_cost_usd: 739200
+    potential_service_penalty_usd: 88361
+    future_replenishment_gap_cost_usd: 65000
+    total_incremental_cost_usd: 892561
+    service_risk: medium_high
+  candidate_interventions:
+  - id: overtime_longmont_and_scottsville
+    action_type: production_reallocation_overtime
+    incremental_cost_usd: 138000
+    projected_service_recovery_pct: 75
+    risk: changeover_and_labor_availability
+  - id: drawdown_mccalla_fg_and_replenish_later
+    action_type: inventory_buffer_absorption
+    incremental_cost_usd: 42000
+    projected_service_recovery_pct: 55
+    risk: future_cover_below_threshold
+  - id: shift_southeast_orders_to_central_dc
+    action_type: network_reallocation
+    incremental_cost_usd: 97000
+    projected_service_recovery_pct: 82
+    risk: central_dc_cover_drawdown
+  recommended_intervention_id: shift_southeast_orders_to_central_dc
+  estimated_recommended_net_impact_usd: 97000
+  simulation_instruction: Run daily 10-day capacity and inventory depletion simulation; compare production overtime, inventory drawdown,
+    and DC reallocation.
+- id: TAC_003_west_cold_dc_capacity_constraint
+  event_horizon: tactical
+  event_type: cold_storage_capacity_constraint
+  status: active_alert
+  trigger_window:
+    expected_start_in_days: 4
+    expected_duration_days: 7
+    planning_bucket: daily
+  business_question: Should Longmont output be rerouted to Central DC or 3PL overflow storage while West DC freezer capacity is constrained?
+  signal_sources:
+  - system: WMS_capacity_dashboard
+    events:
+    - pallet_position_fill_rate_breach
+    - inbound_appointment_backlog
+  - system: 3PL_cold_storage_portal
+    events:
+    - freezer_maintenance_notice
+    - overflow_rate_card_update
+  - system: APS_deployment_plan
+    events:
+    - deployment_exception
+    - blocked_inbound_slot
+  affected_model_objects:
+    nodes:
+    - cold_dc_west
+    - frozen_inventory_longmont
+    - retailer_dc_grocery_mass
+    relationships:
+    - rel_longmont_fg_to_west_dc
+    - rel_west_dc_to_grocery_mass
+  overlay_patches:
+  - target_type: node
+    target_id: cold_dc_west
+    metric: dc_storage_utilization_pct
+    baseline_value: 92
+    scenario_value: 99
+    operation: replace
+  - target_type: node
+    target_id: cold_dc_west
+    metric: available_inbound_pallet_slots
+    baseline_value: 28000
+    scenario_value: 9000
+    operation: replace
+  - target_type: relationship
+    target_id: rel_longmont_fg_to_west_dc
+    path: lead_time.modeled_mean_days
+    baseline_value: 2
+    scenario_value: 3.5
+    operation: replace
+  - target_type: node
+    target_id: cold_dc_west
+    metric: premium_overflow_storage_cost_usd_per_pallet_day
+    baseline_value: 2.35
+    scenario_value: 3.6
+    operation: replace
+  scenario_assumptions:
+    overflow_pallets_required: 4200
+    overflow_days: 7
+    incremental_overflow_cost_usd_per_pallet_day: 1.25
+    delayed_cases_at_risk: 28000
+  estimated_no_action_impact:
+    overflow_storage_cost_usd: 105840
+    late_replenishment_penalty_risk_usd: 67200
+    extra_handling_cost_usd: 22000
+    total_incremental_cost_usd: 195040
+    service_risk: medium
+  candidate_interventions:
+  - id: temporary_3PL_overflow_west
+    action_type: overflow_storage
+    incremental_cost_usd: 105840
+    projected_service_recovery_pct: 88
+    risk: additional_handling
+  - id: reroute_longmont_output_to_central_dc
+    action_type: deployment_reroute
+    incremental_cost_usd: 76000
+    projected_service_recovery_pct: 80
+    risk: central_dc_capacity_drawdown
+  - id: slow_production_release_from_longmont
+    action_type: production_pacing
+    incremental_cost_usd: 54000
+    projected_service_recovery_pct: 62
+    risk: plant_fg_inventory_buildup
+  recommended_intervention_id: reroute_longmont_output_to_central_dc
+  estimated_recommended_net_impact_usd: 76000
+  simulation_instruction: Run 7-day warehouse capacity and replenishment simulation; compare overflow storage, deployment reroute, and
+    production pacing.

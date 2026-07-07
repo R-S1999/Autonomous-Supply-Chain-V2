@@ -1,0 +1,36 @@
+simulation_runtime_contract:
+  inputs:
+  - uncrustables_bau_graph_cost_enriched.yaml
+  - uncrustables_events_alerts_overlay.yaml
+  runtime_steps:
+  - load_BAU_graph
+  - select_event_or_batch_of_events
+  - deep_copy_BAU_graph_to_scenario_graph
+  - apply_overlay_patches_to_target_nodes_and_relationships
+  - run_discrete_event_simulation_for_event_horizon
+  - generate_candidate_interventions
+  - simulate_each_intervention
+  - rank_by_OTIF_recovery_cost_inventory_risk_and_feasibility
+  - write_simulation_results_json
+  recommended_outputs:
+    scenario_kpi_delta_table:
+    - node_id
+    - relationship_id
+    - metric
+    - baseline
+    - scenario
+    - delta
+    - unit
+    intervention_ranking:
+    - event_id
+    - intervention_id
+    - OTIF_recovery_pct
+    - incremental_cost_usd
+    - residual_risk
+    - recommended_flag
+    graph_visual_overlay:
+    - node_status
+    - edge_status
+    - alert_badges
+    - flow_delta
+    - cost_delta
