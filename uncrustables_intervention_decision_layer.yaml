@@ -1,0 +1,625 @@
+schema_version: "1.0"
+model_name: "uncrustables_intervention_decision_layer"
+
+purpose: >
+  Defines intervention candidates that are applied on top of the BAU graph and alert overlay.
+  The simulation runner compares BAU cost, disrupted do-nothing cost, and intervention costs,
+  then ranks options.
+
+inputs:
+  bau_graph_yaml: "uncrustables_bau_graph_cost_enriched.yaml"
+  alerts_overlay_yaml: "uncrustables_events_alerts_overlay.yaml"
+  runtime_contract_yaml: "uncrustables_simulation_runtime_contract.yaml"
+
+simulation_logic:
+  sequence:
+    - load_bau_graph
+    - calculate_bau_fulfillment_cost
+    - load_alert_overlay
+    - apply_alert_patches_to_bau_copy
+    - calculate_disrupted_do_nothing_cost
+    - load_candidate_interventions_for_alert_type
+    - for_each_intervention_apply_intervention_patches_to_alerted_graph
+    - run_scenario_simulation
+    - calculate_intervention_fulfillment_cost
+    - compare_bau_vs_do_nothing_vs_intervention
+    - rank_interventions
+  optimizer_required: false
+  ranking_method: scenario_comparison_not_mathematical_optimization
+  when_optimizer_becomes_required:
+    - intervention_quantity_is_variable
+    - multiple_DC_split_quantities_are_variable
+    - supplier_allocation_percentages_are_variable
+    - forward_buy_weeks_or_quantities_are_decision_variables
+    - production_overtime_hours_are_decision_variables
+
+cost_rollup_model:
+  total_fulfillment_cost_formula: >
+    raw_material_cost + packaging_cost + conversion_cost + standard_transport_cost +
+    expedite_transport_premium + ambient_storage_cost + cold_storage_cost + inventory_carrying_cost +
+    spoilage_or_ageing_writeoff_cost + quality_hold_or_rework_cost + production_downtime_cost +
+    overtime_cost + overflow_storage_cost + OTIF_penalty_cost + lost_margin_cost
+
+  cost_components:
+    - name: raw_material_cost
+      applies_to:
+        - tier_1_supplier
+        - secondary_processing
+      source_systems:
+        - ERP_purchase_order
+        - ERP_goods_receipt
+        - EDI_810_invoice
+        - supplier_contract_master
+      calculation: received_quantity_lb * delivered_cost_usd_per_lb
+
+    - name: packaging_cost
+      applies_to:
+        - tier_1_supplier
+        - packaging_inventory
+      source_systems:
+        - ERP_purchase_order
+        - supplier_contract_master
+        - EDI_810_invoice
+      calculation: received_packaging_units * delivered_packaging_cost_usd_per_unit
+
+    - name: conversion_cost
+      applies_to:
+        - secondary_processing
+        - manufacturing_plant
+      source_systems:
+        - MES_production_confirmation
+        - ERP_production_order
+        - plant_costing_model
+      calculation: processed_output_units * conversion_cost_usd_per_unit
+
+    - name: standard_transport_cost
+      applies_to:
+        - relationship
+      source_systems:
+        - TMS_shipment_record
+        - carrier_invoice
+        - freight_audit_payment
+      calculation: shipped_quantity * lane_standard_freight_cost_per_unit
+
+    - name: expedite_transport_premium
+      applies_to:
+        - relationship
+      source_systems:
+        - TMS_expedite_tender
+        - carrier_spot_quote
+        - freight_audit_payment
+      calculation: shipped_quantity * lane_standard_freight_cost_per_unit * (expedite_multiplier - 1)
+
+    - name: ambient_storage_cost
+      applies_to:
+        - inventory_buffer
+      source_systems:
+        - WMS_inventory_snapshot
+        - warehouse_cost_model
+      calculation: average_inventory_units * ambient_storage_cost_per_unit_per_day * days_held
+
+    - name: cold_storage_cost
+      applies_to:
+        - finished_goods_inventory
+        - cold_chain_distribution_center
+      source_systems:
+        - WMS_inventory_snapshot
+        - third_party_logistics_storage_invoice
+        - reefer_warehouse_cost_model
+      calculation: average_frozen_cases * cold_storage_cost_per_case_per_day * days_held
+
+    - name: inventory_carrying_cost
+      applies_to:
+        - inventory_buffer
+        - finished_goods_inventory
+        - cold_chain_distribution_center
+      source_systems:
+        - ERP_inventory_valuation
+        - finance_working_capital_rate
+      calculation: average_inventory_value * annual_carrying_rate / 365 * days_held
+
+    - name: spoilage_or_ageing_writeoff_cost
+      applies_to:
+        - inventory_buffer
+        - finished_goods_inventory
+      source_systems:
+        - WMS_lot_age
+        - QMS_expiry_hold
+        - ERP_scrap_posting
+      calculation: expired_or_writeoff_quantity * inventory_value_per_unit
+
+    - name: quality_hold_or_rework_cost
+      applies_to:
+        - tier_1_supplier
+        - secondary_processing
+        - manufacturing_plant
+      source_systems:
+        - QMS_quality_hold
+        - LIMS_lot_result
+        - MES_rework_confirmation
+      calculation: held_or_reworked_quantity * rework_or_hold_cost_per_unit
+
+    - name: production_downtime_cost
+      applies_to:
+        - manufacturing_plant
+      source_systems:
+        - MES_downtime_event
+        - plant_maintenance_system
+        - ERP_capacity_loss_posting
+      calculation: lost_production_hours * downtime_cost_usd_per_hour
+
+    - name: overtime_cost
+      applies_to:
+        - manufacturing_plant
+      source_systems:
+        - MES_shift_schedule
+        - HR_timekeeping
+        - ERP_labor_costing
+      calculation: overtime_hours * overtime_cost_usd_per_hour
+
+    - name: overflow_storage_cost
+      applies_to:
+        - cold_chain_distribution_center
+      source_systems:
+        - WMS_capacity_snapshot
+        - third_party_logistics_overflow_storage_invoice
+      calculation: overflow_cases * overflow_storage_cost_per_case_per_day * overflow_days
+
+    - name: OTIF_penalty_cost
+      applies_to:
+        - retailer_distribution_center
+      source_systems:
+        - EDI_214_status
+        - EDI_945_ship_confirmation
+        - customer_chargeback_portal
+      calculation: late_or_short_cases * OTIF_penalty_usd_per_case
+
+    - name: lost_margin_cost
+      applies_to:
+        - retailer_distribution_center
+      source_systems:
+        - ERP_sales_order
+        - finance_margin_model
+        - customer_service_level_report
+      calculation: unfulfilled_cases * contribution_margin_usd_per_case
+
+  comparison_metrics:
+    incremental_cost_vs_BAU: scenario_total_fulfillment_cost - BAU_total_fulfillment_cost
+    avoided_cost_vs_do_nothing: do_nothing_disrupted_cost - intervention_total_fulfillment_cost
+    service_recovery_pct: 1 - intervention_short_cases / do_nothing_short_cases
+    intervention_is_financially_preferred_if: avoided_cost_vs_do_nothing > 0
+
+intervention_playbook:
+  - event_type: shipment_delay
+    event_horizon: tactical
+    candidate_interventions:
+      - id: do_nothing
+        action_type: no_action_baseline
+        description: Accept delayed shipment and quantify service and cost impact.
+        model_patches: []
+        cost_components_triggered:
+          - standard_transport_cost
+          - OTIF_penalty_cost
+          - lost_margin_cost
+        expected_kpi_effect:
+          transport_lead_time_days: unchanged_from_alert_overlay
+          OTIF_risk: high
+          expedite_cost: 0
+
+      - id: expedite_current_shipment
+        action_type: transport_expedite
+        description: Upgrade delayed reefer shipment to faster transport or team-driver movement.
+        model_patches:
+          - target_type: relationship
+            target_selector: affected_relationship_from_alert
+            metric: scenario_transport_lead_time_days
+            operation: reduce_by
+            value: 1.5
+            unit: days
+          - target_type: relationship
+            target_selector: affected_relationship_from_alert
+            metric: freight_cost_usd_per_case
+            operation: multiply_by
+            value: 2.2
+        cost_components_triggered:
+          - standard_transport_cost
+          - expedite_transport_premium
+          - residual_OTIF_penalty_cost
+        expected_kpi_effect:
+          OTIF_risk: medium_to_low
+          DC_inventory_cover: partially_recovered
+          transport_cost: high
+
+      - id: dispatch_replacement_from_alternate_cold_dc
+        action_type: alternate_source_fulfillment
+        description: Ship replacement cases from alternate cold-chain DC while original delayed shipment continues.
+        model_patches:
+          - target_type: node
+            target_selector: alternate_cold_chain_dc
+            metric: available_finished_goods_cases
+            operation: decrease_by
+            value_source: replacement_quantity_cases
+          - target_type: relationship
+            target_selector: alternate_cold_dc_to_affected_retailer_dc
+            metric: scenario_transport_lead_time_days
+            operation: set_to
+            value: 1.5
+            unit: days
+          - target_type: relationship
+            target_selector: alternate_cold_dc_to_affected_retailer_dc
+            metric: freight_cost_usd_per_case
+            operation: multiply_by
+            value: 1.8
+        cost_components_triggered:
+          - expedite_transport_premium
+          - cold_storage_cost
+          - inventory_risk_penalty
+          - residual_OTIF_penalty_cost
+        expected_kpi_effect:
+          OTIF_risk: low
+          alternate_DC_days_of_cover: reduced
+          transport_cost: medium_to_high
+
+  - event_type: plant_capacity_loss
+    event_horizon: tactical
+    candidate_interventions:
+      - id: do_nothing
+        action_type: no_action_baseline
+        description: Allow reduced plant output to flow through the network and quantify service impact.
+        model_patches: []
+        cost_components_triggered:
+          - production_downtime_cost
+          - OTIF_penalty_cost
+          - lost_margin_cost
+        expected_kpi_effect:
+          plant_output_cases: reduced
+          finished_goods_cover: depleted
+          retailer_service_risk: high
+
+      - id: run_overtime_at_unaffected_plants
+        action_type: capacity_recovery
+        description: Use overtime at alternate plants to recover part of lost production.
+        model_patches:
+          - target_type: node
+            target_selector: alternate_manufacturing_plants
+            metric: weekly_output_capacity_cases
+            operation: increase_by_pct
+            value: 12
+          - target_type: node
+            target_selector: alternate_manufacturing_plants
+            metric: overtime_hours
+            operation: set_to
+            value: 16
+            unit: hours_per_week
+        cost_components_triggered:
+          - overtime_cost
+          - conversion_cost
+          - standard_transport_cost
+        expected_kpi_effect:
+          network_output_recovery_pct: 60
+          conversion_cost: higher
+          finished_goods_cover: stabilized
+
+      - id: prioritize_key_retailer_orders_using_finished_goods_buffer
+        action_type: allocation_priority
+        description: Use existing finished goods inventory to protect high-priority retailer Distribution Centers.
+        model_patches:
+          - target_type: node
+            target_selector: finished_goods_inventory_buffers
+            metric: allocation_priority
+            operation: set_to
+            value: walmart_sams_and_high_penalty_retailers_first
+        cost_components_triggered:
+          - inventory_carrying_cost
+          - OTIF_penalty_cost
+          - lost_margin_cost
+        expected_kpi_effect:
+          high_priority_OTIF: protected
+          lower_priority_service_level: reduced
+          inventory_cover: depleted_faster
+
+  - event_type: cold_storage_capacity_constraint
+    event_horizon: tactical
+    candidate_interventions:
+      - id: do_nothing
+        action_type: no_action_baseline
+        description: Accept cold-storage congestion and quantify loading delay and service impact.
+        model_patches: []
+        cost_components_triggered:
+          - overflow_storage_cost
+          - OTIF_penalty_cost
+          - lost_margin_cost
+        expected_kpi_effect:
+          warehouse_dwell_time: increased
+          outbound_lead_time: increased
+          service_risk: medium_to_high
+
+      - id: activate_overflow_3PL_cold_storage
+        action_type: capacity_substitution
+        description: Move excess frozen cases into overflow third-party cold storage.
+        model_patches:
+          - target_type: node
+            target_selector: affected_cold_chain_dc
+            metric: effective_storage_capacity_cases
+            operation: increase_by
+            value_source: overflow_capacity_cases
+          - target_type: node
+            target_selector: affected_cold_chain_dc
+            metric: overflow_storage_cost_per_case_per_day
+            operation: set_to
+            value: 0.045
+            unit: USD_per_case_per_day
+        cost_components_triggered:
+          - overflow_storage_cost
+          - additional_handling_cost
+          - standard_transport_cost
+        expected_kpi_effect:
+          storage_utilization: reduced_to_feasible_level
+          cost: higher
+          retailer_service_risk: reduced
+
+      - id: cross_dock_direct_to_retailer_dc
+        action_type: flow_bypass
+        description: Bypass constrained cold storage and move eligible finished goods directly to retailer Distribution Centers.
+        model_patches:
+          - target_type: relationship
+            target_selector: plant_to_retailer_dc_direct_lane
+            metric: enabled
+            operation: set_to
+            value: true
+          - target_type: relationship
+            target_selector: plant_to_retailer_dc_direct_lane
+            metric: freight_cost_usd_per_case
+            operation: multiply_by
+            value: 1.35
+        cost_components_triggered:
+          - standard_transport_cost
+          - incremental_handling_cost
+        expected_kpi_effect:
+          cold_storage_utilization: reduced
+          transport_cost: higher
+          lead_time: potentially_lower
+
+  - event_type: peanut_price_increase
+    event_horizon: long_term
+    candidate_interventions:
+      - id: do_nothing
+        action_type: no_action_baseline
+        description: Continue BAU peanut sourcing and absorb future price increase and capacity constraint.
+        model_patches: []
+        cost_components_triggered:
+          - raw_material_cost
+          - production_constraint_cost
+          - lost_margin_cost
+        expected_kpi_effect:
+          peanut_cost_usd_per_lb: increased_from_alert_overlay
+          peanut_supplier_capacity: reduced_from_alert_overlay
+          peanut_inventory_cover: lower
+
+      - id: forward_buy_4_weeks_peanuts
+        action_type: forward_buy
+        description: Buy 4 additional weeks of peanut requirement before expected price increase.
+        model_patches:
+          - target_type: node
+            target_selector: peanut_raw_material_inventory
+            metric: inventory_on_hand_lb
+            operation: increase_by
+            value_source: 4_weeks_peanut_consumption_lb
+          - target_type: node
+            target_selector: peanut_raw_material_inventory
+            metric: storage_utilization_pct
+            operation: increase_by
+            value_source: calculated_from_forward_buy_volume
+        cost_components_triggered:
+          - raw_material_cost
+          - ambient_storage_cost
+          - inventory_carrying_cost
+          - spoilage_or_ageing_writeoff_cost
+        expected_kpi_effect:
+          price_exposure: partially_reduced
+          inventory_cover: increased
+          storage_cost: increased
+          ageing_risk: low_to_medium
+
+      - id: forward_buy_8_weeks_peanuts
+        action_type: forward_buy
+        description: Buy 8 additional weeks of peanut requirement before expected price increase.
+        model_patches:
+          - target_type: node
+            target_selector: peanut_raw_material_inventory
+            metric: inventory_on_hand_lb
+            operation: increase_by
+            value_source: 8_weeks_peanut_consumption_lb
+          - target_type: node
+            target_selector: peanut_raw_material_inventory
+            metric: storage_utilization_pct
+            operation: increase_by
+            value_source: calculated_from_forward_buy_volume
+        cost_components_triggered:
+          - raw_material_cost
+          - ambient_storage_cost
+          - inventory_carrying_cost
+          - spoilage_or_ageing_writeoff_cost
+        expected_kpi_effect:
+          price_exposure: materially_reduced
+          inventory_cover: significantly_increased
+          storage_cost: high
+          ageing_risk: medium_to_high
+
+      - id: shift_20pct_to_fast_peanut_supplier
+        action_type: supplier_allocation_shift
+        description: Move 20 percent of peanut allocation to faster but more expensive secondary supplier.
+        model_patches:
+          - target_type: node
+            target_selector: primary_peanut_supplier
+            metric: allocation_share_pct
+            operation: decrease_by
+            value: 20
+          - target_type: node
+            target_selector: fast_peanut_supplier
+            metric: allocation_share_pct
+            operation: increase_by
+            value: 20
+        cost_components_triggered:
+          - raw_material_cost
+          - standard_transport_cost
+        expected_kpi_effect:
+          lead_time_risk: reduced
+          material_cost: increased
+          capacity_resilience: increased
+
+  - event_type: fruit_base_crop_yield_pressure
+    event_horizon: long_term
+    candidate_interventions:
+      - id: do_nothing
+        action_type: no_action_baseline
+        description: Continue BAU fruit base sourcing and absorb yield-related cost and capacity pressure.
+        model_patches: []
+        cost_components_triggered:
+          - raw_material_cost
+          - production_constraint_cost
+          - lost_margin_cost
+        expected_kpi_effect:
+          fruit_base_cost: increased_from_alert_overlay
+          fruit_supplier_capacity: reduced_from_alert_overlay
+          fruit_inventory_cover: lower
+
+      - id: forward_buy_6_weeks_fruit_base
+        action_type: forward_buy
+        description: Build 6 weeks of fruit base inventory before expected crop-related price increase.
+        model_patches:
+          - target_type: node
+            target_selector: fruit_base_inventory
+            metric: inventory_on_hand_lb
+            operation: increase_by
+            value_source: 6_weeks_fruit_base_consumption_lb
+        cost_components_triggered:
+          - raw_material_cost
+          - ambient_storage_cost
+          - inventory_carrying_cost
+          - spoilage_or_ageing_writeoff_cost
+        expected_kpi_effect:
+          price_exposure: reduced
+          storage_cost: increased
+          ageing_risk: medium
+
+      - id: dual_source_fruit_base
+        action_type: supplier_allocation_shift
+        description: Activate secondary fruit base supplier to reduce capacity risk.
+        model_patches:
+          - target_type: node
+            target_selector: secondary_fruit_base_supplier
+            metric: allocation_share_pct
+            operation: increase_by
+            value: 25
+        cost_components_triggered:
+          - raw_material_cost
+          - standard_transport_cost
+          - quality_hold_or_rework_cost
+        expected_kpi_effect:
+          supplier_capacity_risk: reduced
+          material_cost: increased
+          quality_variability: slightly_increased
+
+  - event_type: packaging_inflation_or_shortage
+    event_horizon: long_term
+    candidate_interventions:
+      - id: do_nothing
+        action_type: no_action_baseline
+        description: Continue BAU packaging sourcing and absorb future packaging cost and lead-time increase.
+        model_patches: []
+        cost_components_triggered:
+          - packaging_cost
+          - production_constraint_cost
+          - lost_margin_cost
+        expected_kpi_effect:
+          packaging_cost: increased_from_alert_overlay
+          packaging_lead_time: increased
+          line_stop_risk: medium
+
+      - id: forward_buy_8_weeks_packaging
+        action_type: forward_buy
+        description: Build 8 weeks of wrapper and carton inventory before expected cost increase.
+        model_patches:
+          - target_type: node
+            target_selector: packaging_inventory
+            metric: inventory_on_hand_units
+            operation: increase_by
+            value_source: 8_weeks_packaging_consumption_units
+        cost_components_triggered:
+          - packaging_cost
+          - ambient_storage_cost
+          - inventory_carrying_cost
+          - packaging_obsolescence_cost
+        expected_kpi_effect:
+          price_exposure: reduced
+          storage_cost: increased
+          obsolescence_risk: medium
+
+      - id: approve_alternate_packaging_supplier
+        action_type: supplier_qualification
+        description: Qualify alternate packaging supplier to improve continuity and reduce line-stop risk.
+        model_patches:
+          - target_type: node
+            target_selector: alternate_packaging_supplier
+            metric: supplier_status
+            operation: set_to
+            value: approved_for_contingency
+          - target_type: node
+            target_selector: alternate_packaging_supplier
+            metric: available_capacity_units_per_week
+            operation: set_to
+            value_source: supplier_onboarding_capacity_record
+        cost_components_triggered:
+          - supplier_qualification_cost
+          - packaging_cost
+          - quality_hold_or_rework_cost
+        expected_kpi_effect:
+          continuity_risk: reduced
+          unit_packaging_cost: slightly_increased
+          implementation_timeline: longer_than_forward_buy
+
+decision_output_contract:
+  scenario_outputs:
+    - BAU_cost_breakdown
+    - do_nothing_disrupted_cost_breakdown
+    - intervention_cost_breakdown
+    - incremental_cost_vs_BAU
+    - avoided_cost_vs_do_nothing
+    - service_recovery_pct
+    - OTIF_risk_after_intervention
+    - inventory_cover_after_intervention
+    - residual_risk
+    - recommended_rank
+
+  ranking_rules:
+    - priority: 1
+      rule: remove_infeasible_interventions
+      condition: inventory_cover_after_intervention < minimum_required_cover OR supplier_capacity_exceeded OR cold_storage_capacity_exceeded
+
+    - priority: 2
+      rule: protect_OTIF_for_high_priority_retailer_DCs
+      condition: retailer_priority == high
+      rank_by: lowest_OTIF_penalty_then_lowest_total_cost
+
+    - priority: 3
+      rule: rank_remaining_by_lowest_total_fulfillment_cost
+      rank_by: intervention_total_fulfillment_cost
+
+    - priority: 4
+      rule: use_avoided_cost_vs_do_nothing_as_business_case
+      rank_by: highest_avoided_cost_vs_do_nothing
+
+  example_decision_record:
+    alert_id: alert_tactical_late_reefer_to_walmart_sams
+    BAU_total_fulfillment_cost_usd: 1000000
+    do_nothing_disrupted_cost_usd: 1325000
+    recommended_intervention: expedite_current_shipment
+    intervention_total_fulfillment_cost_usd: 1115000
+    incremental_cost_vs_BAU_usd: 115000
+    avoided_cost_vs_do_nothing_usd: 210000
+    service_recovery_pct: 92
+    recommendation_reason:
+      - Avoided cost versus do-nothing is positive
+      - OTIF risk reduced from high to low
+      - Incremental freight premium is lower than expected chargeback and lost margin

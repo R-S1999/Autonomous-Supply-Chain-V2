@@ -1,0 +1,13 @@
+{
+  "name": "uncrustables-supply-mesh",
+  "version": "1.0.0",
+  "description": "Sense · Simulate · Intervene · Act — autonomous supply chain demo for the Smucker's Uncrustables network",
+  "type": "module",
+  "scripts": {
+    "gen": "node scripts/build-data.mjs",
+    "dev": "npx -y serve -l 5180 ."
+  },
+  "devDependencies": {
+    "js-yaml": "^5.2.1"
+  }
+}

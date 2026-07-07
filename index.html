@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uncrustables Supply Mesh</title>
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='38' fill='none' stroke='%230d9e8c' stroke-width='10'/><circle cx='50' cy='50' r='12' fill='%230d9e8c'/></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-title">UNCRUSTABLES SUPPLY MESH</div>
+      <div class="brand-sub">// SENSE · SIMULATE · INTERVENE · ACT</div>
+    </div>
+    <nav class="tabs" id="tabbar">
+      <button class="tab active" data-tab="sense">SENSE</button>
+      <button class="tab" data-tab="simulate">SIMULATE</button>
+      <button class="tab" data-tab="intervene">INTERVENE</button>
+      <button class="tab" data-tab="act">ACT</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="cost-card" id="cost-card">
+        <div class="cost-title" id="cost-title">COST TO FULFILL · BAU</div>
+        <div class="cost-main"><span id="cost-value">$—</span><span class="cost-unit" id="cost-unit">/wk</span></div>
+        <div class="cost-sub" id="cost-sub">15 components</div>
+      </div>
+      <button class="alerts-pill" id="alerts-pill" title="Active alerts">
+        <span class="alert-dot"></span> ALERTS <b id="alerts-count">6</b>
+      </button>
+    </div>
+  </header>
+  <main id="view"></main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
