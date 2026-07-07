@@ -1,21 +1,25 @@
-// INTERVENE — the interventions for the ONE disruption being modeled,
-// ranked by cost to execute, against the cost of doing nothing.
+// INTERVENE — the one disruption being modeled: every intervention re-run
+// through the DES on the same horizon, ranked by simulated net impact vs BAU,
+// against the simulated cost of doing nothing.
 import { EVENTS, ALERT_META, eventsById, money, pretty } from '../model.js';
+import { runBau, runScenario } from '../engine.js';
 
 export function renderIntervene(view, ctx) {
   const wrap = document.createElement('div');
   wrap.className = 'intervene-wrap';
   view.appendChild(wrap);
+  const bau = runBau();
 
   function render(eventId) {
     const e = eventsById[eventId] || EVENTS.find(x => x.event_horizon === 'tactical');
     ctx.state.selectedEventId = e.id;
     wrap.innerHTML = `
       <div class="iv-header">
-        <h2>SIMULATED INTERVENTIONS · RANKED BY COST TO EXECUTE</h2>
-        <p>Showing only the disruption being modeled. Avoided cost = do-nothing impact − execution cost.
-           Recommendation follows the decision-layer ranking rules: feasibility → protect high-priority
-           retailer OTIF → lowest total fulfillment cost.</p>
+        <h2>SIMULATED INTERVENTIONS · RANKED BY NET IMPACT</h2>
+        <p>Each option was re-run through the discrete-event engine on the same horizon as BAU
+           (tactical = 1 month, long-term = 6 months). Net impact = simulated total − BAU total.
+           Avoided cost = do-nothing impact − net impact. Negative avoided cost means the
+           intervention costs more than it saves — the sim will tell you when doing nothing wins.</p>
         <div class="iv-select">
           ${EVENTS.map(x => {
             const m = ALERT_META[x.id];
@@ -31,43 +35,52 @@ export function renderIntervene(view, ctx) {
   function eventCard(e) {
     const m = ALERT_META[e.id];
     const isTac = e.event_horizon === 'tactical';
-    const doNothing = e.estimated_no_action_impact?.total_incremental_cost_usd ?? 0;
-    const rows = [...(e.candidate_interventions || [])]
-      .sort((a, b) => (a.incremental_cost_usd ?? 0) - (b.incremental_cost_usd ?? 0));
+    const dn = runScenario(e.id);
+    const H = dn.horizon;
+    const bauT = bau.frames[H - 1].cumTotal;
+    const bauShorts = bau.frames[H - 1].cum.lost_margin_cost;
+    const dnInc = dn.total - bauT;
+    const dnShorts = dn.cum.lost_margin_cost - bauShorts;
 
-    const rowHtml = rows.map((iv, i) => {
-      const cost = iv.incremental_cost_usd ?? 0;
-      const avoided = doNothing - cost;
-      const reco = e.recommended_intervention_id === iv.id;
-      const recovery = iv.projected_OTIF_recovery_pct ?? iv.projected_service_recovery_pct ?? null;
+    const rows = (e.candidate_interventions || []).map(iv => {
+      const run = runScenario(e.id, iv.id);
+      const net = run.total - bauT;
+      const shorts = run.cum.lost_margin_cost - bauShorts;
+      const recovery = dnShorts > 1000 ? Math.max(0, Math.min(1, 1 - shorts / dnShorts)) : null;
+      return { iv, net, avoided: dnInc - net, recovery };
+    }).sort((a, b) => a.net - b.net);
+
+    const rowHtml = rows.map((r, i) => {
+      const reco = e.recommended_intervention_id === r.iv.id;
+      const simBest = i === 0 && r.avoided > 0;
       return `<tr>
         <td class="rank">#${i + 1}</td>
         <td>
-          <div class="iname">${pretty(iv.id)}${reco ? '<span class="badge-reco">RECOMMENDED</span>' : ''}</div>
-          <div class="itype">${pretty(iv.action_type)}${iv.expected_effect ? ' · ' + pretty(iv.expected_effect) : ''}</div>
+          <div class="iname">${pretty(r.iv.id)}${simBest ? '<span class="badge-reco">SIM BEST</span>' : ''}${reco ? '<span class="badge-base">PLAYBOOK PICK</span>' : ''}</div>
+          <div class="itype">${pretty(r.iv.action_type)} · declared budget ${money(r.iv.incremental_cost_usd)}</div>
         </td>
-        <td class="cost">${money(cost)}</td>
-        <td class="avoided ${avoided < 0 ? 'neg' : ''}">${money(avoided, { plus: true })}</td>
-        <td>${recovery != null
-          ? `<span class="recov-bar"><i style="width:${recovery}%"></i></span>${recovery}%`
-          : '<span class="risk">n/a</span>'}</td>
-        <td class="risk">${pretty(iv.risk ?? iv.residual_risk ?? '—')}</td>
-        <td><button class="iv-act-btn" data-act="${e.id}::${iv.id}">AUTOMATE ▸</button></td>
+        <td class="cost">${money(r.net, { plus: true })}</td>
+        <td class="avoided ${r.avoided < 0 ? 'neg' : ''}">${money(r.avoided, { plus: true })}</td>
+        <td>${r.recovery != null
+          ? `<span class="recov-bar"><i style="width:${Math.round(r.recovery * 100)}%"></i></span>${Math.round(r.recovery * 100)}%`
+          : '<span class="risk">no service loss</span>'}</td>
+        <td class="risk">${pretty(r.iv.risk ?? r.iv.residual_risk ?? '—')}</td>
+        <td><button class="iv-act-btn" data-act="${e.id}::${r.iv.id}">AUTOMATE ▸</button></td>
       </tr>`;
     }).join('');
 
     return `<div class="iv-event-card">
       <div class="iv-event-head">
         <span class="code ${isTac ? 'tac' : 'lt'}">${m.code}</span>
-        <span class="title">${m.title}<span class="badge-base">${isTac ? 'ACTIVE ALERT' : 'FORECAST WATCH'}</span></span>
+        <span class="title">${m.title}<span class="badge-base">${isTac ? '1-MO HORIZON' : '6-MO HORIZON'}</span></span>
         <span class="donothing">
-          <div class="v">${money(doNothing)}</div>
-          <div class="k">COST OF DOING NOTHING</div>
+          <div class="v">${money(dnInc, { plus: true })}</div>
+          <div class="k">SIMULATED COST OF DOING NOTHING</div>
         </span>
       </div>
       <table class="iv-table">
         <thead><tr>
-          <th></th><th>INTERVENTION</th><th>COST TO EXECUTE</th><th>AVOIDED COST</th>
+          <th></th><th>INTERVENTION</th><th>SIM NET IMPACT VS BAU</th><th>AVOIDED COST</th>
           <th>SERVICE RECOVERY</th><th>RESIDUAL RISK</th><th></th>
         </tr></thead>
         <tbody>
@@ -75,7 +88,7 @@ export function renderIntervene(view, ctx) {
             <td class="rank">—</td>
             <td><div class="iname">do_nothing<span class="badge-base">BASELINE</span></div>
               <div class="itype">accept disruption · ${pretty(e.estimated_no_action_impact?.service_risk || '')} service risk</div></td>
-            <td class="cost" style="color:var(--red)">${money(doNothing)}</td>
+            <td class="cost" style="color:var(--red)">${money(dnInc, { plus: true })}</td>
             <td class="avoided neg">$0</td>
             <td><span class="risk">0%</span></td>
             <td class="risk">${pretty(e.estimated_no_action_impact?.service_risk || '')}</td>

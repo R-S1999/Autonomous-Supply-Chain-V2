@@ -1,25 +1,31 @@
-// BAU cost-to-fulfill cards (1-month / 6-month) with a hover breakdown that
-// sums every decision-layer cost component to the total.
-import { bauWeeklyCost, money, pretty, COST_COMPONENT_COUNT } from './model.js';
+// BAU cost-to-fulfill cards (1-month / 6-month) computed by the DES engine.
+// Hover breakdown = every decision-layer cost bucket accumulated by the run.
+import { money, pretty, COST_COMPONENT_COUNT } from './model.js';
+import { runBau } from './engine.js';
 
-const BAU = bauWeeklyCost();
-export const BAU_WEEKLY = BAU.total;
-
-export function fillCostCard(el, label, weeks) {
-  el.innerHTML = `
-    <div class="cost-title">COST TO FULFILL · ${label}</div>
-    <div class="cost-main"><span>${money(BAU.total * weeks)}</span></div>
-    <div class="cost-sub">${COST_COMPONENT_COUNT} components · hover for breakdown</div>`;
+export function bauCards() {
+  const bau = runBau();
+  return {
+    oneMo: bau.frames[29],
+    sixMo: bau.frames[bau.frames.length - 1],
+  };
 }
 
-export function attachBreakdown(el, label, weeks) {
+export function fillCostCard(el, label, frame) {
+  el.innerHTML = `
+    <div class="cost-title">COST TO FULFILL · ${label}</div>
+    <div class="cost-main"><span>${money(frame.cumTotal)}</span></div>
+    <div class="cost-sub">DES-computed · ${COST_COMPONENT_COUNT} components · hover for breakdown</div>`;
+}
+
+export function attachBreakdown(el, label, frame) {
   const tip = document.createElement('div');
   tip.className = 'cost-breakdown hidden';
   tip.innerHTML = `
-    <div class="cb-title">${label} · ALL ${COST_COMPONENT_COUNT} COST COMPONENTS</div>
-    ${Object.entries(BAU.components).map(([k, v]) =>
-      `<div class="cb-row"><span>${pretty(k)}</span><b>${money(v * weeks)}</b></div>`).join('')}
-    <div class="cb-row total"><span>TOTAL COST TO FULFILL</span><b>${money(BAU.total * weeks)}</b></div>`;
+    <div class="cb-title">${label} · SIMULATED COST BUCKETS</div>
+    ${Object.entries(frame.cum).map(([k, v]) =>
+      `<div class="cb-row"><span>${pretty(k)}</span><b>${money(v)}</b></div>`).join('')}
+    <div class="cb-row total"><span>TOTAL COST TO FULFILL</span><b>${money(frame.cumTotal)}</b></div>`;
   document.body.appendChild(tip);
 
   el.addEventListener('mouseenter', () => {

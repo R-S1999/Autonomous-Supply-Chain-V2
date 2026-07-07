@@ -1,24 +1,14 @@
-// App shell: tab routing + header BAU cost cards (1-month / 6-month).
+// App shell: tab routing. Cost cards live inside the Sense/Simulate screens
+// (right rail), computed by the DES engine.
 import { renderSense } from './tabs/sense.js';
 import { renderSimulate } from './tabs/simulate.js';
 import { renderIntervene } from './tabs/intervene.js';
 import { renderAct } from './tabs/act.js';
-import { EVENTS, DAYS_PER_MONTH } from './model.js';
-import { fillCostCard, attachBreakdown } from './costcards.js';
+import { EVENTS } from './model.js';
 
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
-const costCards = document.getElementById('cost-cards');
 document.getElementById('alerts-count').textContent = EVENTS.length;
-
-/* header cards: monthly + 6-month BAU cost to fulfill, hover = full breakdown */
-const ONE_MO_WEEKS = DAYS_PER_MONTH / 7;
-const card1 = document.getElementById('card-1mo');
-const card6 = document.getElementById('card-6mo');
-fillCostCard(card1, '1-MO BAU', ONE_MO_WEEKS);
-fillCostCard(card6, '6-MO BAU', ONE_MO_WEEKS * 6);
-attachBreakdown(card1, '1-MONTH BAU', ONE_MO_WEEKS);
-attachBreakdown(card6, '6-MONTH BAU', ONE_MO_WEEKS * 6);
 
 const state = { selectedEventId: null, selectedInterventionId: null };
 let destroyCurrent = null;
@@ -26,7 +16,6 @@ let activeTab = null;
 
 const ctx = {
   state,
-  setHeaderCards(show) { costCards.style.display = show ? 'flex' : 'none'; },
   gotoTab(tab, opts = {}) {
     if (opts.eventId !== undefined) state.selectedEventId = opts.eventId;
     if (opts.interventionId !== undefined) state.selectedInterventionId = opts.interventionId;
@@ -41,7 +30,6 @@ function switchTab(name) {
   if (destroyCurrent) { try { destroyCurrent(); } catch { /* noop */ } }
   view.innerHTML = '';
   activeTab = name;
-  ctx.setHeaderCards(true);
   for (const b of tabbar.querySelectorAll('.tab')) b.classList.toggle('active', b.dataset.tab === name);
   destroyCurrent = TABS[name](view, ctx) || null;
 }

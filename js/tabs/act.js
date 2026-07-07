@@ -4,7 +4,8 @@
 // Uses OpenAI via /api/act (user-supplied key); falls back to a deterministic
 // local executor built from the same YAML source-system data when no key/API.
 import { renderGraph } from '../graph.js';
-import { buildScenarioTimeline, TimelinePlayer } from '../sim.js';
+import { TimelinePlayer } from '../sim.js';
+import { runScenario } from '../engine.js';
 import {
   EVENTS, ALERT_META, eventsById, nodesById, NODE_META, money, pretty,
 } from '../model.js';
@@ -110,8 +111,8 @@ export function renderAct(view, ctx) {
     graph.setAlerts(Object.fromEntries(m.origins.map(o => [o, [e.id]])));
     graph.setAgentBadge(m.origins[0]);
     if (scenarioPlayer) scenarioPlayer.destroy();
-    const frames = buildScenarioTimeline(e);
-    scenarioPlayer = new TimelinePlayer(frames, f => graph.setFrame(f), { msPerTick: 420 });
+    const run = runScenario(e.id);
+    scenarioPlayer = new TimelinePlayer(run.frames, f => graph.setFrame(f), { msPerTick: run.horizon === 30 ? 300 : 70 });
     scenarioPlayer.play();
   }
 

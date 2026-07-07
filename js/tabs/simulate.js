@@ -1,14 +1,13 @@
-// SIMULATE — models ONE disruption at a time. Left rail: all alerts, stacked,
-// never overlapping the mesh. Right rail: 1-month + 6-month BAU cost cards
-// (hover = full component breakdown) with the cost-of-doing-nothing beneath.
+// SIMULATE — plays the DES for ONE disruption on its comparison horizon
+// (tactical → 1 month, long-term → 6 months, same horizons as the BAU cards)
+// so "cost of doing nothing" is a clean simulated delta vs BAU.
 import { renderGraph } from '../graph.js';
-import { buildScenarioTimeline, TimelinePlayer, impactBreakdown } from '../sim.js';
-import { EVENTS, ALERT_META, money, pretty, DAYS_PER_MONTH } from '../model.js';
-import { fillCostCard, attachBreakdown } from '../costcards.js';
+import { TimelinePlayer } from '../sim.js';
+import { EVENTS, ALERT_META, money, pretty } from '../model.js';
+import { runBau, runScenario } from '../engine.js';
+import { bauCards, fillCostCard, attachBreakdown } from '../costcards.js';
 
 export function renderSimulate(view, ctx) {
-  ctx.setHeaderCards(false); // the two BAU cards live inside this screen instead
-
   view.innerHTML = `
     <div class="sim-layout">
       <aside class="sim-rail sim-rail-left">
@@ -19,7 +18,7 @@ export function renderSimulate(view, ctx) {
           return `<button class="rail-chip" data-id="${e.id}">
             <b class="${isTac ? 'tac' : 'lt'}">${m.code}</b>
             <span>${m.title}</span>
-            <i>${isTac ? 'ACTIVE' : 'WATCH'} · ~${e.trigger_window?.expected_start_in_days}d out</i>
+            <i>${isTac ? 'ACTIVE · 1-MO RUN' : 'WATCH · 6-MO RUN'}</i>
           </button>`;
         }).join('')}
       </aside>
@@ -31,25 +30,24 @@ export function renderSimulate(view, ctx) {
       </aside>
     </div>`;
 
-  const ONE_MO_WEEKS = DAYS_PER_MONTH / 7;
+  const { oneMo, sixMo } = bauCards();
   const c1 = view.querySelector('#rc-1mo');
   const c6 = view.querySelector('#rc-6mo');
-  fillCostCard(c1, '1-MO BAU', ONE_MO_WEEKS);
-  fillCostCard(c6, '6-MO BAU', ONE_MO_WEEKS * 6);
-  const detach1 = attachBreakdown(c1, '1-MONTH BAU', ONE_MO_WEEKS);
-  const detach6 = attachBreakdown(c6, '6-MONTH BAU', ONE_MO_WEEKS * 6);
+  fillCostCard(c1, '1-MO BAU', oneMo);
+  fillCostCard(c6, '6-MO BAU', sixMo);
+  const detach1 = attachBreakdown(c1, '1-MONTH BAU', oneMo);
+  const detach6 = attachBreakdown(c6, '6-MONTH BAU', sixMo);
 
   const canvas = view.querySelector('#sim-canvas');
   const rail = view.querySelector('.sim-rail-left');
   const impact = view.querySelector('#rc-impact');
-  const graph = renderGraph(canvas, {
-    onSimulate: (eventId) => loadEvent(eventId),
-  });
+  const graph = renderGraph(canvas, { onSimulate: (eventId) => loadEvent(eventId) });
 
   const clock = document.createElement('div');
   clock.className = 'sim-clock';
   canvas.appendChild(clock);
 
+  const bau = runBau();
   let player = null;
 
   function loadEvent(eventId) {
@@ -57,15 +55,22 @@ export function renderSimulate(view, ctx) {
     ctx.state.selectedEventId = event.id;
     const m = ALERT_META[event.id];
     for (const c of rail.querySelectorAll('.rail-chip')) c.classList.toggle('selected', c.dataset.id === event.id);
-
-    /* only the disruption being modeled shows on the mesh */
-    graph.setAlerts({ [m.origins[0]]: [event.id], ...(m.origins[1] ? { [m.origins[1]]: [event.id] } : {}) });
+    graph.setAlerts(Object.fromEntries(m.origins.map(o => [o, [event.id]])));
 
     if (player) player.destroy();
-    const frames = buildScenarioTimeline(event);
+    const run = runScenario(event.id);
+    const frames = run.frames;
+    const H = run.horizon;
+    const finalInc = run.total - bau.frames[H - 1].cumTotal;
+    /* final bucket deltas vs BAU on the same horizon */
+    const deltas = Object.entries(run.cum)
+      .map(([k, v]) => ({ k, d: v - bau.frames[H - 1].cum[k] }))
+      .filter(x => Math.abs(x.d) > 500)
+      .sort((a, b) => Math.abs(b.d) - Math.abs(a.d))
+      .slice(0, 6);
 
     clock.innerHTML = `
-      <span class="mode">DES · ${m.code}</span>
+      <span class="mode">DES · ${m.code} · ${H === 30 ? '1-MO' : '6-MO'} HORIZON</span>
       <span class="day" id="sc-day">—</span>
       <span class="phase pre" id="sc-phase">PRE-EVENT</span>
       <button id="sc-restart" title="Replay">⟲</button>`;
@@ -79,12 +84,14 @@ export function renderSimulate(view, ctx) {
       </div>
       <div class="impact-total">
         <div class="num" id="imp-num">$0</div>
-        <div class="lbl">INCREMENTAL VS BAU · ${event.trigger_window?.expected_duration_days}D EVENT WINDOW</div>
+        <div class="lbl">SIMULATED INCREMENTAL VS BAU · SAME ${H === 30 ? '1-MONTH' : '6-MONTH'} HORIZON</div>
       </div>
       <div class="impact-lines">
-        ${impactBreakdown(event).map(l => `<div class="impact-line"><span class="k">${pretty(l.key)}</span><span class="v">${money(l.value)}</span></div>`).join('')}
+        ${deltas.map(x => `<div class="impact-line"><span class="k">${pretty(x.k)}</span><span class="v">${money(x.d, { plus: true })}</span></div>`).join('')}
+        <div class="impact-line" style="border-top:1px solid var(--line);margin-top:4px;padding-top:6px">
+          <span class="k" style="font-weight:700">projected total</span>
+          <span class="v" style="color:var(--red)">${money(finalInc, { plus: true })}</span></div>
       </div>
-      <div class="impact-q">${event.business_question}</div>
       <div class="impact-cta">
         <button class="btn-primary" id="imp-iv">RANK INTERVENTIONS ▸</button>
         <button class="btn-ghost" id="imp-act">AUTOMATE ▸</button>
@@ -93,13 +100,13 @@ export function renderSimulate(view, ctx) {
     impact.querySelector('#imp-iv').addEventListener('click', () => ctx.gotoTab('intervene', { eventId: event.id }));
     impact.querySelector('#imp-act').addEventListener('click', () => ctx.gotoTab('act', { eventId: event.id }));
 
-    player = new TimelinePlayer(frames, (f) => {
+    player = new TimelinePlayer(frames, (f, i) => {
       graph.setFrame(f);
-      dayEl.textContent = `${f.label} / ${f.totalTicks}`;
+      dayEl.textContent = `${f.label} / ${H}`;
       phaseEl.textContent = f.phase === 'pre' ? 'PRE-EVENT' : f.phase === 'active' ? 'DISRUPTION ACTIVE' : 'AFTERMATH';
       phaseEl.className = `phase ${f.phase}`;
-      numEl.textContent = money(f.cumIncrementalCost);
-    }, { msPerTick: event.event_horizon === 'tactical' ? 240 : 130 });
+      numEl.textContent = money(Math.max(0, f.cumTotal - bau.frames[Math.min(i, bau.frames.length - 1)].cumTotal));
+    }, { msPerTick: H === 30 ? 260 : 65 });
     clock.querySelector('#sc-restart').addEventListener('click', () => player.restart());
     player.play();
   }
