@@ -5,10 +5,24 @@
 // local executor built from the same YAML source-system data when no key/API.
 import { renderGraph } from '../graph.js';
 import { TimelinePlayer } from '../sim.js';
-import { runScenario } from '../engine.js';
+import { runScenario, runBau } from '../engine.js';
 import {
   EVENTS, ALERT_META, eventsById, nodesById, NODE_META, money, pretty,
 } from '../model.js';
+
+/* simulated economics for the chosen intervention (same numbers as Intervene) */
+function simEconomics(event, intervention) {
+  const dn = runScenario(event.id);
+  const bauF = runBau().frames[dn.horizon - 1];
+  const dnInc = dn.total - bauF.cumTotal;
+  const run = intervention ? runScenario(event.id, intervention.id) : dn;
+  const net = run.total - bauF.cumTotal;
+  const dnShorts = dn.cum.lost_margin_cost - bauF.cum.lost_margin_cost;
+  const ivShorts = run.cum.lost_margin_cost - bauF.cum.lost_margin_cost;
+  const recovery = dnShorts > 1000
+    ? Math.round(Math.max(0, Math.min(1, 1 - ivShorts / dnShorts)) * 100) : null;
+  return { horizon: dn.horizon, dnInc, net, avoided: dnInc - net, recovery };
+}
 import { DECISION_LAYER } from '../data.generated.js';
 
 const EVENT_TO_PLAYBOOK = {
@@ -111,7 +125,8 @@ export function renderAct(view, ctx) {
     graph.setAlerts(Object.fromEntries(m.origins.map(o => [o, [e.id]])));
     graph.setAgentBadge(m.origins[0]);
     if (scenarioPlayer) scenarioPlayer.destroy();
-    const run = runScenario(e.id);
+    /* animate the chain WITH the chosen intervention applied */
+    const run = runScenario(e.id, currentIntervention()?.id || null);
     scenarioPlayer = new TimelinePlayer(run.frames, f => graph.setFrame(f), { msPerTick: run.horizon === 30 ? 300 : 70 });
     scenarioPlayer.play();
   }
@@ -167,6 +182,7 @@ export function renderAct(view, ctx) {
   function buildMessages(event, intervention) {
     const m = ALERT_META[event.id];
     const pb = playbookFor(event, intervention);
+    const sim = simEconomics(event, intervention);
     const systems = sourceSystemsFor(event);
     const nodeNames = (event.affected_model_objects?.nodes || [])
       .map(id => `${id} ("${NODE_META[id]?.name}")`).join(', ');
@@ -192,10 +208,14 @@ Affected lanes: ${(event.affected_model_objects?.relationships || []).join(', ')
 Scenario assumptions: ${JSON.stringify(event.scenario_assumptions)}
 Do-nothing impact: ${JSON.stringify(event.estimated_no_action_impact)}
 
-CHOSEN INTERVENTION: ${intervention.id} (${intervention.action_type}) — cost ${money(intervention.incremental_cost_usd)}
+CHOSEN INTERVENTION: ${intervention.id} (${intervention.action_type}) — declared budget ${money(intervention.incremental_cost_usd)}
 ${intervention.expected_effect ? 'Expected effect: ' + intervention.expected_effect : ''}
 Decision-layer model patches: ${JSON.stringify(pb?.model_patches || [])}
 Cost components triggered: ${JSON.stringify(pb?.cost_components_triggered || [])}
+
+SIMULATED ECONOMICS (discrete-event engine, ${sim.horizon}-day horizon vs BAU — cite THESE numbers in your summary):
+do-nothing incremental cost ${money(sim.dnInc)}; this intervention net impact ${money(sim.net)};
+avoided cost ${money(sim.avoided)}${sim.recovery != null ? `; service recovery ${sim.recovery}%` : '; no service loss to recover'}
 
 AVAILABLE SOURCE SYSTEMS (query/transact only against these): ${systems.join('; ')}
 
@@ -259,6 +279,7 @@ Execute this intervention now.`,
   /* ---------------- scripted fallback executor ---------------- */
   function mockSteps(event, intervention) {
     const pb = playbookFor(event, intervention);
+    const sim = simEconomics(event, intervention);
     const systems = sourceSystemsFor(event);
     const nodes = event.affected_model_objects?.nodes || [];
     const rels = event.affected_model_objects?.relationships || [];
@@ -306,11 +327,10 @@ Execute this intervention now.`,
     }
     steps.push(
       { system: sys(/APS|planning/i, 'APS_deployment_plan'), action: 'Write the intervention back into the planning model: patched lead times, capacities and allocations', call: 'APS PATCH /scenario/commit', payload: (pb?.model_patches || []).slice(0, 3), node: nodes[0] },
-      { system: 'simulation_runtime', action: 'Re-run the DES on the patched graph to verify recovery vs the do-nothing baseline', call: 'sim.run(scenario=intervention, horizon=event_window)', payload: { expected_avoided_cost_usd: (event.estimated_no_action_impact?.total_incremental_cost_usd || 0) - (intervention.incremental_cost_usd || 0) }, node: nodes[0] },
+      { system: 'simulation_runtime', action: 'Re-run the DES on the patched graph to verify recovery vs the do-nothing baseline', call: `sim.run(scenario=intervention, horizon=${sim.horizon}d)`, payload: { do_nothing_incremental_usd: Math.round(sim.dnInc), intervention_net_impact_usd: Math.round(sim.net), avoided_cost_usd: Math.round(sim.avoided) }, node: nodes[0] },
       { system: sys(/telemetry|tracking|monitor|EDI/i, 'TMS_carrier_tracking'), action: 'Arm monitoring: subscribe to the alert signal events and set KPI guardrails to auto-close or escalate', call: 'events.subscribe(' + (event.signal_sources?.[0]?.events || []).join(',') + ')', payload: { guardrail: 'OTIF ≥ 95%' }, node: nodes[nodes.length - 1] });
-    const recovery = intervention.projected_OTIF_recovery_pct ?? intervention.projected_service_recovery_pct;
-    const summary = `Executed ${pretty(intervention.id)} for ${money(intervention.incremental_cost_usd)} vs ${money(event.estimated_no_action_impact?.total_incremental_cost_usd)} do-nothing exposure` +
-      (recovery ? `; projected service recovery ${recovery}%.` : '.') +
+    const summary = `Executed ${pretty(intervention.id)}: simulated net impact ${money(sim.net, { plus: true })} vs BAU on the ${sim.horizon}-day horizon, against ${money(sim.dnInc, { plus: true })} if we did nothing — ${money(sim.avoided)} avoided` +
+      (sim.recovery != null ? `, service recovery ${sim.recovery}%.` : ' (buffers held, no service loss).') +
       ` Residual risk: ${pretty(intervention.risk ?? intervention.residual_risk ?? 'low')}. Monitoring armed on ${pretty(event.signal_sources?.[0]?.system || 'source systems')}.`;
     return { steps, summary };
   }
