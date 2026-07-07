@@ -318,3 +318,12 @@ export function bauWeeklyCost() {
 
 export const COST_COMPONENT_COUNT = DECISION_LAYER.cost_rollup_model.cost_components.length;
 export const DAYS_PER_MONTH = 30.4;
+
+/* alerts indexed by the node they ORIGINATE from */
+export const ALERTS_BY_ORIGIN = (() => {
+  const map = {};
+  for (const e of EVENTS) {
+    for (const origin of ALERT_META[e.id]?.origins || []) (map[origin] ||= []).push(e.id);
+  }
+  return map;
+})();

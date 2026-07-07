@@ -1,34 +1,32 @@
-// INTERVENE — every simulated intervention, ranked by cost to execute,
-// against the cost of doing nothing for its alert.
-import { EVENTS, ALERT_META, money, pretty, COST_COMPONENT_COUNT } from '../model.js';
-import { BAU_WEEKLY_TOTAL } from '../sim.js';
+// INTERVENE — the interventions for the ONE disruption being modeled,
+// ranked by cost to execute, against the cost of doing nothing.
+import { EVENTS, ALERT_META, eventsById, money, pretty } from '../model.js';
 
 export function renderIntervene(view, ctx) {
-  ctx.setCost({
-    title: 'COST TO FULFILL · BAU',
-    value: money(BAU_WEEKLY_TOTAL),
-    unit: '/wk',
-    sub: `${COST_COMPONENT_COUNT} components · baseline for all comparisons`,
-  });
-
   const wrap = document.createElement('div');
   wrap.className = 'intervene-wrap';
+  view.appendChild(wrap);
 
-  const ordered = [...EVENTS].sort((a, b) => {
-    const focus = ctx.state.selectedEventId;
-    if (a.id === focus) return -1;
-    if (b.id === focus) return 1;
-    return (a.event_horizon === 'tactical' ? 0 : 1) - (b.event_horizon === 'tactical' ? 0 : 1);
-  });
-
-  wrap.innerHTML = `
-    <div class="iv-header">
-      <h2>SIMULATED INTERVENTIONS · RANKED BY COST TO EXECUTE</h2>
-      <p>Every candidate was simulated on the alert-patched mesh (scenario comparison, no optimizer).
-         Avoided cost = do-nothing impact − execution cost. Recommendation follows the decision-layer
-         ranking rules: feasibility → protect high-priority retailer OTIF → lowest total fulfillment cost.</p>
-    </div>
-    ${ordered.map(e => eventCard(e)).join('')}`;
+  function render(eventId) {
+    const e = eventsById[eventId] || EVENTS.find(x => x.event_horizon === 'tactical');
+    ctx.state.selectedEventId = e.id;
+    wrap.innerHTML = `
+      <div class="iv-header">
+        <h2>SIMULATED INTERVENTIONS · RANKED BY COST TO EXECUTE</h2>
+        <p>Showing only the disruption being modeled. Avoided cost = do-nothing impact − execution cost.
+           Recommendation follows the decision-layer ranking rules: feasibility → protect high-priority
+           retailer OTIF → lowest total fulfillment cost.</p>
+        <div class="iv-select">
+          ${EVENTS.map(x => {
+            const m = ALERT_META[x.id];
+            const isTac = x.event_horizon === 'tactical';
+            return `<button class="scenario-chip ${x.id === e.id ? 'selected' : ''}" data-id="${x.id}" title="${m.title}">
+              <b class="${isTac ? 'tac' : 'lt'}">${m.code}</b></button>`;
+          }).join('')}
+        </div>
+      </div>
+      ${eventCard(e)}`;
+  }
 
   function eventCard(e) {
     const m = ALERT_META[e.id];
@@ -90,6 +88,8 @@ export function renderIntervene(view, ctx) {
   }
 
   wrap.addEventListener('click', (ev) => {
+    const chip = ev.target.closest('.scenario-chip');
+    if (chip) { render(chip.dataset.id); return; }
     const act = ev.target.closest('[data-act]');
     if (act) {
       const [eventId, interventionId] = act.dataset.act.split('::');
@@ -100,6 +100,6 @@ export function renderIntervene(view, ctx) {
     if (resim) ctx.gotoTab('simulate', { eventId: resim.dataset.resim });
   });
 
-  view.appendChild(wrap);
+  render(ctx.state.selectedEventId || 'TAC_001_late_reefer_to_walmart_sams_dc');
   return () => {};
 }

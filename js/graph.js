@@ -1,9 +1,10 @@
 // SVG supply-mesh renderer: tier columns, teal ring nodes, dashed bezier lanes,
-// animated flow particles, KPI hover popovers, alert-origin highlighting.
-import { BAU_GRAPH, } from './data.generated.js';
+// animated flow particles whose arrivals light up the receiving node,
+// node-level alert badges, and click-pinned KPI/disruption popovers.
+import { BAU_GRAPH } from './data.generated.js';
 import {
-  COLUMNS, NODE_META, nodesById, columnOf, primaryKpiOf, nodeSubLabel, nodeSource,
-  pretty, fmtKpiValue, kpiOf,
+  COLUMNS, NODE_META, ALERT_META, nodesById, eventsById, columnOf,
+  nodeSubLabel, nodeSource, pretty, fmtKpiValue,
 } from './model.js';
 
 const VB_W = 1560, VB_H = 880;
@@ -98,7 +99,7 @@ export function renderGraph(container, opts = {}) {
       gParticles.appendChild(dot);
       dots.push({ el: dot, phase: (i + Math.random() * 0.6) / n });
     }
-    particleSets[rel.id] = { path, len, dots, state: 'flow' };
+    particleSets[rel.id] = { path, len, dots, state: 'flow', target: rel.to };
   }
 
   /* nodes */
@@ -107,17 +108,20 @@ export function renderGraph(container, opts = {}) {
     const p = pos[node.id];
     if (!p) continue;
     const g = svgEl('g', { class: 'node h-good', 'data-id': node.id, transform: `translate(${p.x} ${p.y})` });
-    const halo = svgEl('circle', { r: p.r + 7, class: 'node-halo' });
     const alertRing = svgEl('circle', { r: p.r + 11, class: 'node-alert-ring' });
+    const halo = svgEl('circle', { r: p.r + 7, class: 'node-halo' });
     const ring = svgEl('circle', { r: p.r, class: 'node-ring' });
     const dot = svgEl('circle', { r: Math.max(3.2, p.r / 4.6), class: 'node-dot' });
     const name = svgEl('text', { y: p.r + 15, class: 'node-name', 'text-anchor': 'middle' });
     name.textContent = NODE_META[node.id]?.name ?? node.id;
     const sub = svgEl('text', { y: p.r + 28, class: 'node-sub', 'text-anchor': 'middle' });
     sub.textContent = nodeSubLabel(node);
-    const originTag = svgEl('text', { y: -(p.r + 12), class: 'origin-tag', 'text-anchor': 'middle' });
-    originTag.textContent = '⚠ ORIGIN';
-    g.append(alertRing, halo, ring, dot, name, sub, originTag);
+    /* node-level alert badge (code tag anchored top-right of the ring) */
+    const tag = svgEl('g', { class: 'alert-tag hidden' });
+    const tagRect = svgEl('rect', { x: -30, y: -9, width: 60, height: 16, rx: 8, class: 'alert-tag-bg' });
+    const tagTxt = svgEl('text', { y: 2.5, class: 'alert-tag-text', 'text-anchor': 'middle' });
+    tag.append(tagRect, tagTxt);
+    g.append(alertRing, halo, ring, dot, name, sub, tag);
     gNodes.appendChild(g);
     nodeEls[node.id] = g;
   }
@@ -131,12 +135,37 @@ export function renderGraph(container, opts = {}) {
   agentBadge.append(abBg, abDot, abTx);
   gTop.appendChild(agentBadge);
 
-  /* ---- popover ----------------------------------------------------- */
+  /* ---- popover (hover = KPIs; click = pinned, incl. disruption detail) ---- */
   const pop = document.createElement('div');
   pop.className = 'kpi-pop hidden';
   container.appendChild(pop);
   let currentFrame = null;
   let hideTimer = null;
+  let pinnedNode = null;
+  let activeAlerts = {}; // nodeId -> [eventId]
+
+  function alertSectionHtml(nodeId) {
+    const evIds = activeAlerts[nodeId] || [];
+    if (!evIds.length) return '';
+    return `<div class="pop-alerts">${evIds.map(id => {
+      const e = eventsById[id];
+      const m = ALERT_META[id];
+      const isTac = e.event_horizon === 'tactical';
+      const systems = (e.signal_sources || []).map(s => pretty(s.system)).join(' · ');
+      return `<div class="pop-alert">
+        <div class="pa-head">
+          <b class="${isTac ? 'tac' : 'lt'}">${m.code}</b>
+          <span class="pa-title">${m.title}</span>
+        </div>
+        <div class="pa-meta">${e.status === 'active_alert' ? 'ACTIVE ALERT' : 'FORECAST WATCH'} ·
+          HITS IN ~${e.trigger_window?.expected_start_in_days}D ·
+          WINDOW ${e.trigger_window?.expected_duration_days}D</div>
+        <div class="pa-q">${e.business_question || ''}</div>
+        <div class="pa-src">SIGNALS · ${systems}</div>
+        <button class="pa-sim" data-sim="${id}">SIMULATE THIS DISRUPTION ▸</button>
+      </div>`;
+    }).join('')}</div>`;
+  }
 
   function showPopover(nodeId) {
     const node = nodesById[nodeId];
@@ -144,7 +173,6 @@ export function renderGraph(container, opts = {}) {
     const overrides = currentFrame?.valueOverrides?.[nodeId] || {};
     const health = currentFrame?.nodeHealth?.[nodeId] || 'good';
     const kpis = node.kpis || [];
-    const extraMetrics = Object.keys(overrides).filter(m => !kpis.some(k => k.name === m));
     pop.innerHTML = `
       <div class="pop-head">
         <div>
@@ -153,6 +181,7 @@ export function renderGraph(container, opts = {}) {
         </div>
         <span class="chip chip-${health}">${health === 'good' ? 'HEALTHY' : health.toUpperCase()}</span>
       </div>
+      ${alertSectionHtml(nodeId)}
       <div class="pop-kpis">
         ${kpis.map(k => {
           const ov = overrides[k.name];
@@ -165,17 +194,14 @@ export function renderGraph(container, opts = {}) {
             </span>
           </div>`;
         }).join('')}
-        ${extraMetrics.map(m => `<div class="pop-kpi">
-            <span class="pop-kpi-name">${pretty(m)}</span>
-            <span class="pop-kpi-val overridden">${Math.round(overrides[m] * 10) / 10}</span>
-          </div>`).join('')}
       </div>
       <div class="pop-src"><span>SOURCE</span>${pretty(nodeSource(node))}</div>`;
     pop.classList.remove('hidden');
+    pop.classList.toggle('pinned', pinnedNode === nodeId);
 
     const wrapR = container.getBoundingClientRect();
     const nodeR = nodeEls[nodeId].querySelector('.node-ring').getBoundingClientRect();
-    const popW = 320;
+    const popW = 330;
     let left = nodeR.right - wrapR.left + 14;
     if (left + popW > wrapR.width - 8) left = nodeR.left - wrapR.left - popW - 14;
     let top = nodeR.top - wrapR.top - 20;
@@ -185,24 +211,45 @@ export function renderGraph(container, opts = {}) {
     top = Math.max(6, Math.min(top, wrapR.height - h - 10));
     pop.style.top = `${top}px`;
   }
-  function hidePopover() { pop.classList.add('hidden'); }
+  function hidePopover() { pop.classList.add('hidden'); pop.classList.remove('pinned'); }
+  function unpin() { pinnedNode = null; hidePopover(); }
 
   for (const [id, g] of Object.entries(nodeEls)) {
-    g.addEventListener('mouseenter', () => { clearTimeout(hideTimer); showPopover(id); });
-    g.addEventListener('mouseleave', () => { hideTimer = setTimeout(hidePopover, 140); });
-    if (opts.onNodeClick) g.addEventListener('click', () => opts.onNodeClick(id));
+    g.addEventListener('mouseenter', () => { clearTimeout(hideTimer); if (!pinnedNode) showPopover(id); });
+    g.addEventListener('mouseleave', () => { if (!pinnedNode) hideTimer = setTimeout(hidePopover, 140); });
+    g.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      pinnedNode = id;
+      showPopover(id);
+    });
   }
+  svg.addEventListener('click', () => unpin());
+  pop.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-sim]');
+    if (b && opts.onSimulate) opts.onSimulate(b.dataset.sim);
+  });
 
-  /* ---- particle animation ------------------------------------------ */
-  let raf = null, last = performance.now(), t0 = 0;
+  /* ---- particle animation: arrivals light up the receiving node ---- */
+  let raf = null, last = performance.now();
   const SPEED = { flow: 0.055, disrupted: 0.018, watch: 0.055 };
+  const lastFlash = {};
+  function flashNode(id) {
+    const g = nodeEls[id];
+    if (!g) return;
+    const now = performance.now();
+    if (lastFlash[id] && now - lastFlash[id] < 300) return;
+    lastFlash[id] = now;
+    g.classList.add('rx');
+    setTimeout(() => g.classList.remove('rx'), 240);
+  }
   function tick(now) {
     const dt = Math.min(64, now - last); last = now;
-    t0 += dt / 1000;
     for (const ps of Object.values(particleSets)) {
       const sp = SPEED[ps.state] ?? SPEED.flow;
       for (const d of ps.dots) {
+        const prev = d.phase;
         d.phase = (d.phase + sp * dt / 1000) % 1;
+        if (d.phase < prev) flashNode(ps.target); // wrapped => goods arrived
         const pt = ps.path.getPointAtLength(d.phase * ps.len);
         d.el.setAttribute('cx', pt.x);
         d.el.setAttribute('cy', pt.y);
@@ -228,34 +275,51 @@ export function renderGraph(container, opts = {}) {
         edgeEls[id].classList.toggle('lane-watch', st === 'watch');
         for (const d of ps.dots) d.el.classList.toggle('dot-disrupted', st === 'disrupted');
       }
+      if (pinnedNode) showPopover(pinnedNode); // refresh pinned values
     },
+    /* node-level alert badges: { nodeId: [eventId, ...] } */
+    setAlerts(byNode) {
+      activeAlerts = byNode || {};
+      for (const [id, g] of Object.entries(nodeEls)) {
+        const evs = activeAlerts[id] || [];
+        g.classList.toggle('has-alert', evs.length > 0);
+        const tag = g.querySelector('.alert-tag');
+        if (evs.length) {
+          const label = evs.length > 1 ? `${evs.length} ALERTS` : (ALERT_META[evs[0]]?.code || '⚠');
+          const txt = tag.querySelector('text');
+          txt.textContent = label;
+          const w = label.length * 6.6 + 18;
+          const rect = tag.querySelector('rect');
+          rect.setAttribute('x', -w / 2);
+          rect.setAttribute('width', w);
+          const p = pos[id];
+          tag.setAttribute('transform', `translate(${p.r * 0.55 + w / 2} ${-(p.r + 5)})`);
+          tag.classList.remove('hidden');
+        } else {
+          tag.classList.add('hidden');
+        }
+      }
+    },
+    /* dim everything except the affected nodes (no edge highlighting) */
     highlightAlert(event, originIds = []) {
       const affN = new Set(event?.affected_model_objects?.nodes || []);
-      const affE = new Set(event?.affected_model_objects?.relationships || []);
       const on = !!event;
       for (const [id, g] of Object.entries(nodeEls)) {
-        g.classList.toggle('dimmed', on && !affN.has(id));
+        g.classList.toggle('dimmed', on && !affN.has(id) && !originIds.includes(id));
         g.classList.toggle('alert-linked', on && affN.has(id));
         g.classList.toggle('alert-origin', on && originIds.includes(id));
-      }
-      for (const [id, el] of Object.entries(edgeEls)) {
-        el.classList.toggle('dimmed', on && !affE.has(id));
-        el.classList.toggle('lane-alert', on && affE.has(id));
-        const ps = particleSets[id];
-        if (ps) for (const d of ps.dots) d.el.classList.toggle('dimmed', on && !affE.has(id));
       }
     },
     setAgentBadge(nodeId) {
       if (!nodeId || !pos[nodeId]) { agentBadge.classList.add('hidden'); return; }
       const p = pos[nodeId];
-      agentBadge.setAttribute('transform', `translate(${p.x} ${p.y - p.r - 34})`);
+      agentBadge.setAttribute('transform', `translate(${p.x} ${p.y - p.r - 44})`);
       agentBadge.classList.remove('hidden');
     },
     pulseNode(nodeId) {
       const g = nodeEls[nodeId];
       if (!g) return;
       g.classList.remove('agent-pulse');
-      void g.getBBox; // reflow-ish; class re-add restarts animation
       requestAnimationFrame(() => g.classList.add('agent-pulse'));
       setTimeout(() => g.classList.remove('agent-pulse'), 1600);
     },

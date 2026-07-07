@@ -4,7 +4,7 @@
 // Uses OpenAI via /api/act (user-supplied key); falls back to a deterministic
 // local executor built from the same YAML source-system data when no key/API.
 import { renderGraph } from '../graph.js';
-import { buildScenarioTimeline, TimelinePlayer, BAU_WEEKLY_TOTAL } from '../sim.js';
+import { buildScenarioTimeline, TimelinePlayer } from '../sim.js';
 import {
   EVENTS, ALERT_META, eventsById, nodesById, NODE_META, money, pretty,
 } from '../model.js';
@@ -38,12 +38,6 @@ function sourceSystemsFor(event) {
 
 /* ------------------------------------------------------------------ */
 export function renderAct(view, ctx) {
-  ctx.setCost({
-    title: 'COST TO FULFILL · BAU',
-    value: money(BAU_WEEKLY_TOTAL), unit: '/wk',
-    sub: 'agent executes the selected intervention',
-  });
-
   const layout = document.createElement('div');
   layout.className = 'act-layout';
   layout.innerHTML = `
@@ -64,12 +58,8 @@ export function renderAct(view, ctx) {
           <label>INTERVENTION</label>
           <select id="act-iv"></select>
         </div>
-        <div>
-          <label>OPENAI API KEY <span style="text-transform:none">(kept in your browser · blank = scripted executor)</span></label>
-          <input id="act-key" type="password" placeholder="sk-..." autocomplete="off" />
-        </div>
         <div class="row2">
-          <div class="key-hint">Model <b>gpt-4o-mini</b> via <b>/api/act</b> · agent streams NDJSON execution steps</div>
+          <div class="key-hint">Model <b>gpt-4o-mini</b> via <b>/api/act</b> · key from Vercel env <b>OPENAI_API_KEY</b> · scripted executor if unset</div>
           <button class="act-deploy" id="act-deploy">DEPLOY AGENT ▸</button>
         </div>
       </div>
@@ -87,13 +77,10 @@ export function renderAct(view, ctx) {
   const graph = renderGraph(graphHost);
   const selEvent = layout.querySelector('#act-event');
   const selIv = layout.querySelector('#act-iv');
-  const keyInput = layout.querySelector('#act-key');
   const deployBtn = layout.querySelector('#act-deploy');
   const consoleEl = layout.querySelector('#act-console');
   const summaryEl = layout.querySelector('#act-summary');
   const summaryV = layout.querySelector('#act-summary-v');
-  keyInput.value = localStorage.getItem('oa_key') || '';
-  keyInput.addEventListener('change', () => localStorage.setItem('oa_key', keyInput.value.trim()));
 
   let scenarioPlayer = null;
   let running = false;
@@ -120,6 +107,7 @@ export function renderAct(view, ctx) {
     const e = currentEvent();
     const m = ALERT_META[e.id];
     graph.highlightAlert(e, m.origins);
+    graph.setAlerts(Object.fromEntries(m.origins.map(o => [o, [e.id]])));
     graph.setAgentBadge(m.origins[0]);
     if (scenarioPlayer) scenarioPlayer.destroy();
     const frames = buildScenarioTimeline(e);
@@ -215,11 +203,11 @@ Execute this intervention now.`,
     ];
   }
 
-  async function runLLM(event, intervention, apiKey, signal) {
+  async function runLLM(event, intervention, signal) {
     const res = await fetch('/api/act', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ apiKey, messages: buildMessages(event, intervention) }),
+      body: JSON.stringify({ messages: buildMessages(event, intervention) }),
       signal,
     });
     if (!res.ok || !res.body) throw new Error(`api/act ${res.status}`);
@@ -350,13 +338,11 @@ Execute this intervention now.`,
     deployBtn.classList.add('stop');
     resetConsole();
     addNote(`// deploying agent → ${ALERT_META[event.id].code} · ${pretty(intervention.id)} · budget ${money(intervention.incremental_cost_usd)}`);
-    const key = keyInput.value.trim();
     try {
-      if (key) await runLLM(event, intervention, key, aborter.signal);
-      else await runMock(event, intervention, aborter.signal);
+      await runLLM(event, intervention, aborter.signal);
     } catch (err) {
       if (!aborter.signal.aborted) {
-        addNote(`// LLM path failed (${err.message}) — falling back to scripted executor`);
+        addNote(`// LLM path unavailable (${err.message}) — falling back to scripted executor`);
         try { await runMock(event, intervention, aborter.signal); } catch { /* aborted */ }
       }
     } finally {

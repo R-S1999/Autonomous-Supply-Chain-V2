@@ -1,17 +1,24 @@
-// App shell: tab routing + header cost card control.
+// App shell: tab routing + header BAU cost cards (1-month / 6-month).
 import { renderSense } from './tabs/sense.js';
 import { renderSimulate } from './tabs/simulate.js';
 import { renderIntervene } from './tabs/intervene.js';
 import { renderAct } from './tabs/act.js';
-import { EVENTS } from './model.js';
+import { EVENTS, DAYS_PER_MONTH } from './model.js';
+import { fillCostCard, attachBreakdown } from './costcards.js';
 
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
-const costTitle = document.getElementById('cost-title');
-const costValue = document.getElementById('cost-value');
-const costUnit = document.getElementById('cost-unit');
-const costSub = document.getElementById('cost-sub');
+const costCards = document.getElementById('cost-cards');
 document.getElementById('alerts-count').textContent = EVENTS.length;
+
+/* header cards: monthly + 6-month BAU cost to fulfill, hover = full breakdown */
+const ONE_MO_WEEKS = DAYS_PER_MONTH / 7;
+const card1 = document.getElementById('card-1mo');
+const card6 = document.getElementById('card-6mo');
+fillCostCard(card1, '1-MO BAU', ONE_MO_WEEKS);
+fillCostCard(card6, '6-MO BAU', ONE_MO_WEEKS * 6);
+attachBreakdown(card1, '1-MONTH BAU', ONE_MO_WEEKS);
+attachBreakdown(card6, '6-MONTH BAU', ONE_MO_WEEKS * 6);
 
 const state = { selectedEventId: null, selectedInterventionId: null };
 let destroyCurrent = null;
@@ -19,12 +26,7 @@ let activeTab = null;
 
 const ctx = {
   state,
-  setCost({ title, value, unit, sub }) {
-    if (title != null) costTitle.textContent = title;
-    if (value != null) costValue.innerHTML = value;
-    if (unit != null) costUnit.innerHTML = unit;
-    if (sub != null) costSub.innerHTML = sub;
-  },
+  setHeaderCards(show) { costCards.style.display = show ? 'flex' : 'none'; },
   gotoTab(tab, opts = {}) {
     if (opts.eventId !== undefined) state.selectedEventId = opts.eventId;
     if (opts.interventionId !== undefined) state.selectedInterventionId = opts.interventionId;
@@ -39,6 +41,7 @@ function switchTab(name) {
   if (destroyCurrent) { try { destroyCurrent(); } catch { /* noop */ } }
   view.innerHTML = '';
   activeTab = name;
+  ctx.setHeaderCards(true);
   for (const b of tabbar.querySelectorAll('.tab')) b.classList.toggle('active', b.dataset.tab === name);
   destroyCurrent = TABS[name](view, ctx) || null;
 }
@@ -49,7 +52,7 @@ tabbar.addEventListener('click', (e) => {
 });
 document.getElementById('alerts-pill').addEventListener('click', () => switchTab('sense'));
 
-/* deep-linking / verification: ?tab=simulate&event=TAC_001_...&pop=node_id */
+/* deep-linking / verification: ?tab=simulate&event=TAC_001_...&pop=node_id&deploy=1 */
 const params = new URLSearchParams(location.search);
 if (params.get('event')) state.selectedEventId = params.get('event');
 if (params.get('pop')) state.debugPopNode = params.get('pop');
