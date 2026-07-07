@@ -4,7 +4,7 @@
 import { BAU_GRAPH } from './data.generated.js';
 import {
   COLUMNS, NODE_META, ALERT_META, nodesById, eventsById, columnOf,
-  nodeSubLabel, nodeSource, pretty, fmtKpiValue,
+  nodeSubLabel, nodeSource, pretty, fmtKpiValue, expectedShifts, kNum,
 } from './model.js';
 
 const VB_W = 1560, VB_H = 880;
@@ -160,7 +160,11 @@ export function renderGraph(container, opts = {}) {
         <div class="pa-meta">${e.status === 'active_alert' ? 'ACTIVE ALERT' : 'FORECAST WATCH'} ·
           HITS IN ~${e.trigger_window?.expected_start_in_days}D ·
           WINDOW ${e.trigger_window?.expected_duration_days}D</div>
-        <div class="pa-q">${e.business_question || ''}</div>
+        <div class="pa-q">${m.sensed || ''}</div>
+        <div class="pa-shifts">
+          ${expectedShifts(e).map(s =>
+            `<div class="pa-shift"><span>${s.label}</span><b>${kNum(s.from)} → ${kNum(s.to)}</b></div>`).join('')}
+        </div>
         <div class="pa-src">SIGNALS · ${systems}</div>
         <button class="pa-sim" data-sim="${id}">SIMULATE THIS DISRUPTION ▸</button>
       </div>`;

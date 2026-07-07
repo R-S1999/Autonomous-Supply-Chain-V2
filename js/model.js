@@ -55,21 +55,40 @@ export const NODE_META = {
 };
 
 /* origins = the node(s) the alert signal ORIGINATES from (not impact — impact
-   is unknown until the simulation engine runs the overlay).                  */
+   is unknown until the simulation engine runs the overlay).
+   sensed = what the signals tell us is coming (Sense describes, it never prescribes). */
 export const ALERT_META = {
   LT_001_peanut_price_weather_supply_risk:   { code: 'LT-001',  title: 'Peanut price & weather supply risk',
-    origins: ['supplier_peanuts_southeast_contract'] },
+    origins: ['supplier_peanuts_southeast_contract'],
+    sensed: 'Weather intelligence over the Southeast peanut belt plus forward-price and supplier-quote revisions point to a weather-driven supply squeeze: contract cost inflates, committed and emergency capacity tighten, and inbound lead time stretches over a ~90-day window.' },
   LT_002_fruit_base_crop_yield_pressure:     { code: 'LT-002',  title: 'Fruit base crop yield pressure',
-    origins: ['supplier_fruit_west_bulk'] },
+    origins: ['supplier_fruit_west_bulk'],
+    sensed: 'Drought reports and crop-yield downgrades in western fruit regions signal reduced fruit-base availability: bulk cost climbs, weekly ship capacity falls, and replenishment lead time lengthens through the season.' },
   LT_003_packaging_resin_and_paperboard_inflation: { code: 'LT-003', title: 'Packaging resin & paperboard inflation',
-    origins: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter'] },
+    origins: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter'],
+    sensed: 'Resin price-increase reports and paperboard allocation notices from converters signal packaging inflation: wrapper and carton unit costs rise while converter lead times extend and cover thins.' },
   TAC_001_late_reefer_to_walmart_sams_dc:    { code: 'TAC-001', title: "Late reefer → Walmart/Sam's DC",
-    origins: ['cold_dc_central'] },
+    origins: ['cold_dc_central'],
+    sensed: "Carrier tracking and EDI 214 status show a delayed in-transit reefer out of Central Cold DC — ETA slipping ~2.5 days past the Walmart/Sam's appointment window, with ~41k cases exposed and recovery stock at Central reduced." },
   TAC_002_mccalla_line_downtime_capacity_loss:{ code: 'TAC-002', title: 'McCalla line downtime · capacity loss',
-    origins: ['plant_mccalla_frozen_sandwich'] },
+    origins: ['plant_mccalla_frozen_sandwich'],
+    sensed: 'MES line monitoring and an open critical maintenance work order show unplanned downtime at McCalla — ~42 downtime hours expected over 5 days, cutting weekly output ~18% and draining the plant FG buffer.' },
   TAC_003_west_cold_dc_capacity_constraint:  { code: 'TAC-003', title: 'West Cold DC freezer capacity constraint',
-    origins: ['cold_dc_west'] },
+    origins: ['cold_dc_west'],
+    sensed: 'WMS capacity dashboard shows West Cold DC freezer fill breaching its limit with an inbound appointment backlog and a 3PL freezer maintenance notice — inbound pallet slots collapse and premium overflow rates kick in for ~7 days.' },
 };
+
+/* factual "expected shift" lines derived from the overlay patches */
+export function expectedShifts(event, max = 4) {
+  return (event.overlay_patches || [])
+    .filter(p => p.operation === 'replace' && p.baseline_value !== p.scenario_value)
+    .slice(0, max)
+    .map(p => ({
+      label: pretty(p.metric || (p.path || '').replace(/^lead_time\./, 'lead time ').replace('modeled_', '')),
+      from: p.baseline_value,
+      to: p.scenario_value,
+    }));
+}
 
 /* ------------------------------------------------------------------ */
 /* Lookups                                                             */

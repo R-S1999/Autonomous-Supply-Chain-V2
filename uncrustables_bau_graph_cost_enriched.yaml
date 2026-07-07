@@ -2792,3 +2792,331 @@ relationships:
     - name: expedite_reefer_multiplier
       modeled_value: 2.15
       unit: multiplier
+- id: rel_flour_inventory_to_longmont
+  from: inventory_flour_receiving
+  to: plant_longmont_frozen_sandwich
+  relationship_type: ingredient_supply_to_manufacturing
+  material: wheat_flour_or_bread_input
+  modeled_weekly_flow_lb: 418500
+  lead_time:
+    modeled_mean_days: 1
+    modeled_p90_days: 2
+    source_systems:
+    - ERP_stock_transfer_order
+    - WMS_component_staging
+    - MES_line_consumption
+    calculation: MES_consumption_timestamp_minus_WMS_component_staging_timestamp
+  cost:
+    modeled_internal_transfer_cost_usd_per_lb: 0.015
+    source_systems:
+    - ERP_cost_center_accounting
+    - WMS_activity_costing
+    calculation: internal_material_handling_cost_divided_by_flour_lb_issued
+  mode: internal_or_short_haul_truck
+  cost_components:
+    source_systems:
+    - TMS_freight_audit_and_payment
+    - ERP_invoice_matching
+    - carrier_rate_card
+    - 3PL_contract_master
+    source_events:
+    - carrier_invoice
+    - freight_audit_record
+    - shipment_weight_or_case_count
+    - accessorial_charge_record
+    calculation: linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity
+    components:
+    - name: internal_transfer_cost_usd_per_lb
+      modeled_value: 0.01
+      unit: USD_per_lb
+    - name: expedite_multiplier
+      modeled_value: 1.25
+      unit: multiplier
+- id: rel_flour_inventory_to_mccalla
+  from: inventory_flour_receiving
+  to: plant_mccalla_frozen_sandwich
+  relationship_type: ingredient_supply_to_manufacturing
+  material: wheat_flour_or_bread_input
+  modeled_weekly_flow_lb: 264000
+  lead_time:
+    modeled_mean_days: 1.5
+    modeled_p90_days: 2.5
+    source_systems:
+    - ERP_stock_transfer_order
+    - WMS_component_staging
+    - MES_line_consumption
+    calculation: MES_consumption_timestamp_minus_WMS_component_staging_timestamp
+  cost:
+    modeled_internal_transfer_cost_usd_per_lb: 0.017
+    source_systems:
+    - ERP_cost_center_accounting
+    - WMS_activity_costing
+    calculation: internal_material_handling_cost_divided_by_flour_lb_issued
+  mode: internal_or_short_haul_truck
+  cost_components:
+    source_systems:
+    - TMS_freight_audit_and_payment
+    - ERP_invoice_matching
+    - carrier_rate_card
+    - 3PL_contract_master
+    source_events:
+    - carrier_invoice
+    - freight_audit_record
+    - shipment_weight_or_case_count
+    - accessorial_charge_record
+    calculation: linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity
+    components:
+    - name: internal_transfer_cost_usd_per_lb
+      modeled_value: 0.01
+      unit: USD_per_lb
+    - name: expedite_multiplier
+      modeled_value: 1.25
+      unit: multiplier
+- id: rel_peanut_butter_to_scottsville
+  from: processing_peanut_butter_network
+  to: plant_scottsville_frozen_sandwich
+  relationship_type: processed_ingredient_supply_to_manufacturing
+  material: peanut_butter
+  modeled_weekly_flow_lb: 378000
+  lead_time:
+    modeled_mean_days: 2
+    modeled_p90_days: 4
+    source_systems:
+    - ERP_stock_transfer_order
+    - EDI_856_advanced_shipping_notice
+    - TMS_load_tracking
+    - WMS_goods_receipt
+    calculation: WMS_goods_receipt_timestamp_minus_EDI_856_ship_timestamp
+  cost:
+    modeled_transfer_cost_usd_per_lb: 0.05
+    source_systems:
+    - TMS_lane_rate
+    - ERP_internal_freight_settlement
+    calculation: lane_freight_cost_divided_by_peanut_butter_lb_transferred
+  mode: food_grade_bulk_truck_or_tote_truckload
+  cost_components:
+    source_systems:
+    - TMS_freight_audit_and_payment
+    - ERP_invoice_matching
+    - carrier_rate_card
+    - 3PL_contract_master
+    source_events:
+    - carrier_invoice
+    - freight_audit_record
+    - shipment_weight_or_case_count
+    - accessorial_charge_record
+    calculation: linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity
+    components:
+    - name: internal_transfer_cost_usd_per_lb
+      modeled_value: 0.01
+      unit: USD_per_lb
+    - name: expedite_multiplier
+      modeled_value: 1.25
+      unit: multiplier
+- id: rel_peanut_butter_to_mccalla
+  from: processing_peanut_butter_network
+  to: plant_mccalla_frozen_sandwich
+  relationship_type: processed_ingredient_supply_to_manufacturing
+  material: peanut_butter
+  modeled_weekly_flow_lb: 270000
+  lead_time:
+    modeled_mean_days: 4
+    modeled_p90_days: 6
+    source_systems:
+    - ERP_stock_transfer_order
+    - EDI_856_advanced_shipping_notice
+    - TMS_load_tracking
+    - WMS_goods_receipt
+    calculation: WMS_goods_receipt_timestamp_minus_EDI_856_ship_timestamp
+  cost:
+    modeled_transfer_cost_usd_per_lb: 0.055
+    source_systems:
+    - TMS_lane_rate
+    - ERP_internal_freight_settlement
+    calculation: lane_freight_cost_divided_by_peanut_butter_lb_transferred
+  mode: food_grade_bulk_truck_or_tote_truckload
+  cost_components:
+    source_systems:
+    - TMS_freight_audit_and_payment
+    - ERP_invoice_matching
+    - carrier_rate_card
+    - 3PL_contract_master
+    source_events:
+    - carrier_invoice
+    - freight_audit_record
+    - shipment_weight_or_case_count
+    - accessorial_charge_record
+    calculation: linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity
+    components:
+    - name: internal_transfer_cost_usd_per_lb
+      modeled_value: 0.01
+      unit: USD_per_lb
+    - name: expedite_multiplier
+      modeled_value: 1.25
+      unit: multiplier
+- id: rel_fruit_spread_to_scottsville
+  from: processing_fruit_spread_network
+  to: plant_scottsville_frozen_sandwich
+  relationship_type: processed_ingredient_supply_to_manufacturing
+  material: fruit_spread
+  modeled_weekly_flow_lb: 252000
+  lead_time:
+    modeled_mean_days: 3
+    modeled_p90_days: 5
+    source_systems:
+    - ERP_stock_transfer_order
+    - EDI_856_advanced_shipping_notice
+    - reefer_temperature_telemetry
+    - WMS_goods_receipt
+    calculation: WMS_goods_receipt_timestamp_minus_EDI_856_ship_timestamp
+  cost:
+    modeled_transfer_cost_usd_per_lb: 0.06
+    source_systems:
+    - TMS_refrigerated_lane_rate
+    - ERP_internal_freight_settlement
+    calculation: refrigerated_lane_cost_divided_by_fruit_spread_lb_transferred
+  mode: refrigerated_truckload_or_tote_truckload
+  cost_components:
+    source_systems:
+    - TMS_freight_audit_and_payment
+    - ERP_invoice_matching
+    - carrier_rate_card
+    - 3PL_contract_master
+    source_events:
+    - carrier_invoice
+    - freight_audit_record
+    - shipment_weight_or_case_count
+    - accessorial_charge_record
+    calculation: linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity
+    components:
+    - name: internal_transfer_cost_usd_per_lb
+      modeled_value: 0.01
+      unit: USD_per_lb
+    - name: expedite_multiplier
+      modeled_value: 1.25
+      unit: multiplier
+- id: rel_fruit_spread_to_mccalla
+  from: processing_fruit_spread_network
+  to: plant_mccalla_frozen_sandwich
+  relationship_type: processed_ingredient_supply_to_manufacturing
+  material: fruit_spread
+  modeled_weekly_flow_lb: 180000
+  lead_time:
+    modeled_mean_days: 5
+    modeled_p90_days: 7
+    source_systems:
+    - ERP_stock_transfer_order
+    - EDI_856_advanced_shipping_notice
+    - reefer_temperature_telemetry
+    - WMS_goods_receipt
+    calculation: WMS_goods_receipt_timestamp_minus_EDI_856_ship_timestamp
+  cost:
+    modeled_transfer_cost_usd_per_lb: 0.065
+    source_systems:
+    - TMS_refrigerated_lane_rate
+    - ERP_internal_freight_settlement
+    calculation: refrigerated_lane_cost_divided_by_fruit_spread_lb_transferred
+  mode: refrigerated_truckload_or_tote_truckload
+  cost_components:
+    source_systems:
+    - TMS_freight_audit_and_payment
+    - ERP_invoice_matching
+    - carrier_rate_card
+    - 3PL_contract_master
+    source_events:
+    - carrier_invoice
+    - freight_audit_record
+    - shipment_weight_or_case_count
+    - accessorial_charge_record
+    calculation: linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity
+    components:
+    - name: internal_transfer_cost_usd_per_lb
+      modeled_value: 0.01
+      unit: USD_per_lb
+    - name: expedite_multiplier
+      modeled_value: 1.25
+      unit: multiplier
+- id: rel_packaging_to_longmont
+  from: inventory_packaging_receiving
+  to: plant_longmont_frozen_sandwich
+  relationship_type: packaging_supply_to_manufacturing
+  material: wrappers_cartons_cases
+  modeled_weekly_flow_wrappers: 11500000
+  lead_time:
+    modeled_mean_days: 0.5
+    modeled_p90_days: 1
+    source_systems:
+    - WMS_component_staging
+    - MES_line_backflush
+    calculation: MES_packaging_consumption_timestamp_minus_WMS_stage_confirmation_timestamp
+  cost:
+    modeled_handling_cost_usd_per_1000_wrappers: 0.45
+    source_systems:
+    - WMS_activity_costing
+    - ERP_cost_center_accounting
+    calculation: packaging_handling_labor_cost_divided_by_wrappers_issued_times_1000
+  mode: internal_material_staging
+  cost_components:
+    source_systems:
+    - TMS_freight_audit_and_payment
+    - ERP_invoice_matching
+    - carrier_rate_card
+    - 3PL_contract_master
+    source_events:
+    - carrier_invoice
+    - freight_audit_record
+    - shipment_weight_or_case_count
+    - accessorial_charge_record
+    calculation: linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity
+    components:
+    - name: base_lane_freight_cost_usd_per_pallet
+      modeled_value: 72
+      unit: USD_per_pallet
+    - name: expedite_freight_multiplier
+      modeled_value: 1.55
+      unit: multiplier
+    - name: detention_accessorial_cost_usd_per_hour
+      modeled_value: 85
+      unit: USD_per_hour
+- id: rel_packaging_to_mccalla
+  from: inventory_packaging_receiving
+  to: plant_mccalla_frozen_sandwich
+  relationship_type: packaging_supply_to_manufacturing
+  material: wrappers_cartons_cases
+  modeled_weekly_flow_wrappers: 7250000
+  lead_time:
+    modeled_mean_days: 1
+    modeled_p90_days: 1.5
+    source_systems:
+    - WMS_component_staging
+    - MES_line_backflush
+    calculation: MES_packaging_consumption_timestamp_minus_WMS_stage_confirmation_timestamp
+  cost:
+    modeled_handling_cost_usd_per_1000_wrappers: 0.5
+    source_systems:
+    - WMS_activity_costing
+    - ERP_cost_center_accounting
+    calculation: packaging_handling_labor_cost_divided_by_wrappers_issued_times_1000
+  mode: internal_material_staging
+  cost_components:
+    source_systems:
+    - TMS_freight_audit_and_payment
+    - ERP_invoice_matching
+    - carrier_rate_card
+    - 3PL_contract_master
+    source_events:
+    - carrier_invoice
+    - freight_audit_record
+    - shipment_weight_or_case_count
+    - accessorial_charge_record
+    calculation: linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity
+    components:
+    - name: base_lane_freight_cost_usd_per_pallet
+      modeled_value: 72
+      unit: USD_per_pallet
+    - name: expedite_freight_multiplier
+      modeled_value: 1.55
+      unit: multiplier
+    - name: detention_accessorial_cost_usd_per_hour
+      modeled_value: 85
+      unit: USD_per_hour
