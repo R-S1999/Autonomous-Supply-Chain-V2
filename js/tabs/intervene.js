@@ -1,7 +1,10 @@
 // INTERVENE — the one disruption being modeled: every intervention re-run
 // through the DES on the same horizon, ranked by simulated net impact vs BAU,
 // against the simulated cost of doing nothing.
-import { EVENTS, ALERT_META, eventsById, money, pretty } from '../model.js';
+import {
+  EVENTS, ALERT_META, eventsById, money, pretty,
+  INTERVENTION_PROPOSALS, INTERVENTION_NODES, NODE_META,
+} from '../model.js';
 import { runBau, runScenario } from '../engine.js';
 
 export function renderIntervene(view, ctx) {
@@ -97,7 +100,8 @@ export function renderIntervene(view, ctx) {
         <td class="rank">#${i + 1}</td>
         <td>
           <div class="iname">${pretty(r.iv.id)}${simBest ? '<span class="badge-reco">SIM BEST</span>' : ''}${reco ? '<span class="badge-base">PLAYBOOK PICK</span>' : ''}</div>
-          <div class="itype">${pretty(r.iv.action_type)} · declared budget ${money(r.iv.incremental_cost_usd)}</div>
+          <div class="iv-desc">${INTERVENTION_PROPOSALS[r.iv.id] || pretty(r.iv.expected_effect || r.iv.action_type)}</div>
+          <div class="iv-nodes">ACTS ON · ${(INTERVENTION_NODES[r.iv.id] || []).map(n => NODE_META[n]?.name || n).join(' · ')}</div>
         </td>
         <td class="cost has-cb" data-cb="${r.iv.id}">${money(r.net, { plus: true })}<i class="cb-hint">▾</i></td>
         <td class="avoided ${r.avoided < 0 ? 'neg' : ''}">${money(r.avoided, { plus: true })}</td>

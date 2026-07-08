@@ -143,6 +143,7 @@ export function renderGraph(container, opts = {}) {
   let hideTimer = null;
   let pinnedNode = null;
   let activeAlerts = {}; // nodeId -> [eventId]
+  let compareMap = null; // nodeId -> metric -> {bau, worst, pct} (worst-in-window vs BAU)
 
   function alertSectionHtml(nodeId) {
     const evIds = activeAlerts[nodeId] || [];
@@ -186,8 +187,20 @@ export function renderGraph(container, opts = {}) {
         <span class="chip chip-${health}">${health === 'good' ? 'HEALTHY' : health.toUpperCase()}</span>
       </div>
       ${alertSectionHtml(nodeId)}
+      ${compareMap?.[nodeId] ? '<div class="pop-cmp-note">HIGHLIGHTED ROWS = WORST IN DISRUPTION WINDOW VS BAU NORMAL</div>' : ''}
       <div class="pop-kpis">
         ${kpis.map(k => {
+          const cmp = compareMap?.[nodeId]?.[k.name];
+          if (cmp) {
+            return `<div class="pop-kpi pop-kpi-cmp">
+              <span class="pop-kpi-name">${pretty(k.name)}</span>
+              <span class="pop-kpi-val overridden">
+                <s>${fmtKpiValue({ ...k, modeled_value: cmp.bau })}</s> →
+                ${fmtKpiValue({ ...k, modeled_value: cmp.worst })}
+                <em class="cmp-delta">${cmp.pct > 0 ? '+' : ''}${cmp.pct}%</em>
+              </span>
+            </div>`;
+          }
           const ov = overrides[k.name];
           const base = fmtKpiValue(k);
           const now = ov != null ? fmtKpiValue({ ...k, modeled_value: ov }) : null;
@@ -198,6 +211,15 @@ export function renderGraph(container, opts = {}) {
             </span>
           </div>`;
         }).join('')}
+        ${Object.entries(compareMap?.[nodeId] || {})
+          .filter(([mk]) => !kpis.some(k => k.name === mk))
+          .map(([mk, cmp]) => `<div class="pop-kpi pop-kpi-cmp">
+            <span class="pop-kpi-name">${pretty(mk)}</span>
+            <span class="pop-kpi-val overridden">
+              <s>${fmtNum(cmp.bau)}</s> → ${fmtNum(cmp.worst)}
+              <em class="cmp-delta">${cmp.pct > 0 ? '+' : ''}${cmp.pct}%</em>
+            </span>
+          </div>`).join('')}
       </div>
       <div class="pop-src"><span>SOURCE</span>${pretty(nodeSource(node))}</div>`;
     pop.classList.remove('hidden');
@@ -215,6 +237,7 @@ export function renderGraph(container, opts = {}) {
     top = Math.max(6, Math.min(top, wrapR.height - h - 10));
     pop.style.top = `${top}px`;
   }
+  function fmtNum(v) { return `${Math.round(v * 10) / 10}${v <= 100 ? '%' : ''}`; }
   function hidePopover() { pop.classList.add('hidden'); pop.classList.remove('pinned'); }
   function unpin() { pinnedNode = null; hidePopover(); }
 
@@ -328,6 +351,8 @@ export function renderGraph(container, opts = {}) {
       requestAnimationFrame(() => g.classList.add('agent-pulse'));
       setTimeout(() => g.classList.remove('agent-pulse'), 1600);
     },
+    /* worst-in-disruption-window vs BAU-normal comparison shown in popovers */
+    setCompare(map) { compareMap = map; if (pinnedNode) showPopover(pinnedNode); },
     showPopover,
     destroy() { cancelAnimationFrame(raf); container.innerHTML = ''; container.classList.remove('graph-wrap'); },
   };

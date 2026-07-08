@@ -338,6 +338,58 @@ export function bauWeeklyCost() {
 export const COST_COMPONENT_COUNT = DECISION_LAYER.cost_rollup_model.cost_components.length;
 export const DAYS_PER_MONTH = 30.4;
 
+/* what each intervention concretely does (engine-true) + the nodes it acts on */
+export const INTERVENTION_NODES = {
+  expedite_current_reefer: ['cold_dc_central', 'retailer_dc_walmart_sams'],
+  ship_replacement_from_southeast_dc: ['cold_dc_southeast', 'retailer_dc_walmart_sams'],
+  split_replacement_central_and_southeast_dc: ['cold_dc_central', 'cold_dc_southeast', 'retailer_dc_walmart_sams'],
+  overtime_longmont_and_scottsville: ['plant_longmont_frozen_sandwich', 'plant_scottsville_frozen_sandwich', 'frozen_inventory_mccalla'],
+  drawdown_mccalla_fg_and_replenish_later: ['frozen_inventory_mccalla', 'cold_dc_southeast'],
+  shift_southeast_orders_to_central_dc: ['cold_dc_central', 'cold_dc_southeast', 'retailer_dc_walmart_sams'],
+  temporary_3PL_overflow_west: ['cold_dc_west', 'frozen_inventory_longmont'],
+  reroute_longmont_output_to_central_dc: ['frozen_inventory_longmont', 'cold_dc_west', 'cold_dc_central'],
+  slow_production_release_from_longmont: ['plant_longmont_frozen_sandwich', 'frozen_inventory_longmont', 'cold_dc_west'],
+  forward_buy_8_weeks_peanuts: ['supplier_peanuts_southeast_contract', 'supplier_peanuts_regional_fast_response', 'inventory_peanut_receiving'],
+  shift_20_pct_to_regional_fast_supplier: ['supplier_peanuts_southeast_contract', 'supplier_peanuts_regional_fast_response', 'inventory_peanut_receiving'],
+  hedge_or_contract_extension: ['supplier_peanuts_southeast_contract', 'inventory_peanut_receiving'],
+  forward_buy_6_weeks_fruit_base: ['supplier_fruit_west_bulk', 'supplier_fruit_midwest_fast_response', 'inventory_fruit_base_receiving'],
+  prequalify_secondary_midwest_capacity: ['supplier_fruit_midwest_fast_response', 'inventory_fruit_base_receiving'],
+  reformulate_supplier_mix_with_approved_equivalent: ['supplier_fruit_west_bulk', 'supplier_fruit_midwest_fast_response', 'processing_fruit_spread_network'],
+  forward_buy_10_weeks_packaging: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
+  dual_source_carton_converter: ['supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
+  reserve_converter_capacity: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
+};
+
+export const INTERVENTION_PROPOSALS = {
+  expedite_current_reefer: 'Upgrade the delayed Central→Walmart reefer to a team-driver expedite: recover ~1.5 days of transit at 2.2× lane freight on the affected load.',
+  ship_replacement_from_southeast_dc: "Cut replacement orders at SE Cold DC covering ~90% of Walmart's shortfall, shipped on the 1.5-day lane at 1.8× freight while the late load continues inbound.",
+  split_replacement_central_and_southeast_dc: "Split replacement shipments across Central + SE Cold DC to cover ~96% of Walmart's at-risk cases before the requested delivery date, at ~1.9× freight.",
+  overtime_longmont_and_scottsville: 'Schedule 16h/week overtime at Longmont and Scottsville (+12% capacity each) to rebuild McCalla FG cover; overtime premium $0.014 per extra sandwich.',
+  drawdown_mccalla_fg_and_replenish_later: 'Keep serving Southeast from McCalla FG, deliberately running the buffer ~3 days below target, then replenish once the line restarts.',
+  shift_southeast_orders_to_central_dc: 'Re-allocate Southeast retailer orders to Central Cold DC (~82% coverage) at 1.6× freight while McCalla output recovers.',
+  temporary_3PL_overflow_west: 'Book temporary 3PL overflow freezer positions at West ($3.60/pallet-day), restoring ~92% of inbound receiving through the maintenance window.',
+  reroute_longmont_output_to_central_dc: 'Re-tender Longmont FG deployment loads to Central Cold DC and serve Grocery & Mass from Central at 1.5× freight while West works down its backlog.',
+  slow_production_release_from_longmont: 'Pace Longmont production to 90% and hold finished goods at the plant until West Cold DC reopens receiving slots.',
+  forward_buy_8_weeks_peanuts: 'Raise the peanut buffer order-up-to level by 8 weeks of demand before the price lands; suppliers flex to ~1.6× weekly shipments at the pre-increase contract price.',
+  shift_20_pct_to_regional_fast_supplier: "Move 20% of the peanut allocation from the SE contract supplier to the fast-response supplier's 3-day lane for the event window.",
+  hedge_or_contract_extension: 'Extend contract terms / hedge the commodity position to cap roughly half of the peanut price increase, for a $140K commercial fee.',
+  forward_buy_6_weeks_fruit_base: 'Build 6 weeks of fruit base ahead of the crop squeeze at current contract pricing, accepting the added frozen storage and carrying cost.',
+  prequalify_secondary_midwest_capacity: 'Reserve +50% committed capacity at the Midwest fast-response supplier and shift 20% of allocation onto it ($220K reservation fee).',
+  reformulate_supplier_mix_with_approved_equivalent: 'Approve the equivalent-spec fruit base so West bulk supply holds ≥90% and about 45% of its price increase is avoided ($160K R&D/QMS work).',
+  forward_buy_10_weeks_packaging: 'Pull 10 weeks of wrapper volume forward at the pre-increase converter price, accepting storage and artwork-obsolescence exposure.',
+  dual_source_carton_converter: 'Qualify a second carton converter and split volume, capping ~55% of the carton inflation ($310K qualification program).',
+  reserve_converter_capacity: 'Reserve print slots and film capacity ahead of the increase, capping ~50% of wrapper and ~35% of carton inflation ($180K reservation).',
+};
+
+export function actionNodes(event, intervention) {
+  const set = new Set([
+    ...(ALERT_META[event.id]?.origins || []),
+    ...(intervention ? (INTERVENTION_NODES[intervention.id] || []) : []),
+    ...(event.affected_model_objects?.nodes || []),
+  ]);
+  return [...set].filter(id => nodesById[id]);
+}
+
 /* alerts indexed by the node they ORIGINATE from */
 export const ALERTS_BY_ORIGIN = (() => {
   const map = {};

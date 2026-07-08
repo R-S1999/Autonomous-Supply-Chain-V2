@@ -147,6 +147,9 @@ svg.mesh { width: 100%; height: 100%; display: block; }
 .pop-kpi-val { color: var(--teal-dark); font-weight: 700; white-space: nowrap; }
 .pop-kpi-val.overridden { color: #b5761a; }
 .pop-kpi-val s { color: var(--muted); font-weight: 400; }
+.pop-cmp-note { font-size: 7.5px; letter-spacing: 1.2px; color: var(--muted); padding: 7px 0 2px; }
+.pop-kpi-cmp { background: var(--amber-soft); margin: 0 -6px; padding: 3.5px 6px !important; border-radius: 5px; }
+.cmp-delta { font-style: normal; font-size: 8px; font-weight: 800; color: var(--red); background: var(--red-soft); padding: 1.5px 5px; border-radius: 7px; margin-left: 4px; }
 .pop-src { border-top: 1px solid var(--line); padding-top: 8px; font-size: 9px; color: var(--navy); line-height: 1.5; }
 .pop-src span { display: inline-block; background: var(--navy-deep); color: #fff; font-size: 7.5px; letter-spacing: 1.5px; padding: 2.5px 7px; border-radius: 4px; margin-right: 8px; }
 
@@ -326,6 +329,8 @@ table.iv-table { width: 100%; border-collapse: collapse; }
 .iv-table .rank { color: var(--muted); font-size: 9px; width: 30px; }
 .iv-table .iname { font-weight: 700; }
 .iv-table .itype { font-size: 8.5px; color: var(--muted); margin-top: 2px; letter-spacing: .5px; }
+.iv-table .iv-desc { font-size: 9.5px; color: var(--navy-deep); margin-top: 4px; line-height: 1.55; max-width: 520px; }
+.iv-table .iv-nodes { font-size: 8px; letter-spacing: 1px; color: var(--teal-dark); font-weight: 700; margin-top: 4px; }
 .iv-table .cost { font-weight: 800; }
 .iv-table .avoided { color: var(--teal-dark); font-weight: 800; }
 .iv-table .avoided.neg { color: var(--red); }

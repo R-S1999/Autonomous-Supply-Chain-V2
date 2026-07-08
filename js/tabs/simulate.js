@@ -3,9 +3,38 @@
 // so "cost of doing nothing" is a clean simulated delta vs BAU.
 import { renderGraph } from '../graph.js';
 import { TimelinePlayer } from '../sim.js';
-import { EVENTS, ALERT_META, money, pretty } from '../model.js';
+import { EVENTS, ALERT_META, money, pretty, nodesById, kpiOf } from '../model.js';
 import { runBau, runScenario } from '../engine.js';
 import { bauCards, fillCostCard, attachBreakdown } from '../costcards.js';
+
+/* worst value of every simulated node metric inside the disruption window,
+   paired with its BAU-normal value and the % difference */
+function buildCompare(run, bau) {
+  /* BAU normal = the settled BAU value on the same horizon (past warm-up) */
+  const bauRef = bau.frames[Math.min(run.horizon, bau.frames.length) - 1].valueOverrides;
+  const cmp = {};
+  for (const f of run.frames) {
+    if (f.phase === 'pre') continue;
+    for (const [nid, mets] of Object.entries(f.valueOverrides)) {
+      for (const [mk, v] of Object.entries(mets)) {
+        const cur = (cmp[nid] ||= {})[mk];
+        if (!cur || v < cur.worst) cmp[nid][mk] = { worst: v };
+      }
+    }
+  }
+  for (const [nid, mets] of Object.entries(cmp)) {
+    for (const [mk, c] of Object.entries(mets)) {
+      const bauV = bauRef?.[nid]?.[mk] ?? kpiOf(nodesById[nid], mk)?.modeled_value;
+      if (!(bauV > 0)) { delete mets[mk]; continue; }
+      c.bau = Math.round(bauV * 10) / 10;
+      c.worst = Math.round(c.worst * 10) / 10;
+      c.pct = Math.round(((c.worst - bauV) / bauV) * 100);
+      if (c.pct > -1) delete mets[mk]; // only genuine worsenings
+    }
+    if (!Object.keys(mets).length) delete cmp[nid];
+  }
+  return cmp;
+}
 
 export function renderSimulate(view, ctx) {
   view.innerHTML = `
@@ -61,6 +90,7 @@ export function renderSimulate(view, ctx) {
     const run = runScenario(event.id);
     const frames = run.frames;
     const H = run.horizon;
+    graph.setCompare(buildCompare(run, bau)); // popovers: worst-in-window vs BAU
     const finalInc = run.total - bau.frames[H - 1].cumTotal;
     /* final bucket deltas vs BAU on the same horizon */
     const deltas = Object.entries(run.cum)
@@ -117,6 +147,7 @@ export function renderSimulate(view, ctx) {
   });
 
   loadEvent(ctx.state.selectedEventId || 'TAC_001_late_reefer_to_walmart_sams_dc');
+  if (ctx.state.debugPopNode) setTimeout(() => graph.showPopover(ctx.state.debugPopNode), 800);
 
   return () => { if (player) player.destroy(); detach1(); detach6(); graph.destroy(); };
 }

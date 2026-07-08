@@ -7,7 +7,7 @@ import { renderGraph } from '../graph.js';
 import { TimelinePlayer } from '../sim.js';
 import { runScenario, runBau } from '../engine.js';
 import {
-  EVENTS, ALERT_META, eventsById, nodesById, NODE_META, money, pretty,
+  EVENTS, ALERT_META, eventsById, nodesById, NODE_META, money, pretty, actionNodes,
 } from '../model.js';
 
 /* simulated economics for the chosen intervention (same numbers as Intervene) */
@@ -24,38 +24,6 @@ function simEconomics(event, intervention) {
   return { horizon: dn.horizon, dnInc, net, avoided: dnInc - net, recovery };
 }
 import { DECISION_LAYER } from '../data.generated.js';
-
-/* the nodes each intervention physically acts on (beyond the event's own
-   affected set) — highlighted on the mesh and walked step by step */
-const INTERVENTION_NODES = {
-  expedite_current_reefer: ['cold_dc_central', 'retailer_dc_walmart_sams'],
-  ship_replacement_from_southeast_dc: ['cold_dc_southeast', 'retailer_dc_walmart_sams'],
-  split_replacement_central_and_southeast_dc: ['cold_dc_central', 'cold_dc_southeast', 'retailer_dc_walmart_sams'],
-  overtime_longmont_and_scottsville: ['plant_longmont_frozen_sandwich', 'plant_scottsville_frozen_sandwich', 'frozen_inventory_mccalla'],
-  drawdown_mccalla_fg_and_replenish_later: ['frozen_inventory_mccalla', 'cold_dc_southeast'],
-  shift_southeast_orders_to_central_dc: ['cold_dc_central', 'cold_dc_southeast', 'retailer_dc_walmart_sams'],
-  temporary_3PL_overflow_west: ['cold_dc_west', 'frozen_inventory_longmont'],
-  reroute_longmont_output_to_central_dc: ['frozen_inventory_longmont', 'cold_dc_west', 'cold_dc_central'],
-  slow_production_release_from_longmont: ['plant_longmont_frozen_sandwich', 'frozen_inventory_longmont', 'cold_dc_west'],
-  forward_buy_8_weeks_peanuts: ['supplier_peanuts_southeast_contract', 'supplier_peanuts_regional_fast_response', 'inventory_peanut_receiving'],
-  shift_20_pct_to_regional_fast_supplier: ['supplier_peanuts_southeast_contract', 'supplier_peanuts_regional_fast_response', 'inventory_peanut_receiving'],
-  hedge_or_contract_extension: ['supplier_peanuts_southeast_contract', 'inventory_peanut_receiving'],
-  forward_buy_6_weeks_fruit_base: ['supplier_fruit_west_bulk', 'supplier_fruit_midwest_fast_response', 'inventory_fruit_base_receiving'],
-  prequalify_secondary_midwest_capacity: ['supplier_fruit_midwest_fast_response', 'inventory_fruit_base_receiving'],
-  reformulate_supplier_mix_with_approved_equivalent: ['supplier_fruit_west_bulk', 'supplier_fruit_midwest_fast_response', 'processing_fruit_spread_network'],
-  forward_buy_10_weeks_packaging: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
-  dual_source_carton_converter: ['supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
-  reserve_converter_capacity: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
-};
-
-function actionNodes(event, intervention) {
-  const set = new Set([
-    ...(ALERT_META[event.id]?.origins || []),
-    ...(intervention ? (INTERVENTION_NODES[intervention.id] || []) : []),
-    ...(event.affected_model_objects?.nodes || []),
-  ]);
-  return [...set].filter(id => nodesById[id]);
-}
 
 const EVENT_TO_PLAYBOOK = {
   TAC_001_late_reefer_to_walmart_sams_dc: 'shipment_delay',
