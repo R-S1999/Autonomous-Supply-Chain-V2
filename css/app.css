@@ -204,6 +204,10 @@ svg.mesh { width: 100%; height: 100%; display: block; }
 .cb-row b { color: var(--navy-deep); }
 .cb-row.total { border-top: 1px solid var(--line); margin-top: 5px; padding-top: 7px; font-weight: 800; }
 .cb-row.total b { color: var(--teal-dark); }
+.cb-row b.cb-neg { color: var(--teal-dark); }
+.cb-why { margin-top: 7px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: 8.5px; color: #b5761a; line-height: 1.55; }
+.iv-table .has-cb { cursor: help; }
+.cb-hint { font-style: normal; color: var(--muted); font-size: 8px; margin-left: 5px; }
 
 /* simulate layout: left alert rail · mesh · right cost rail */
 .sim-layout { display: flex; height: 100%; }

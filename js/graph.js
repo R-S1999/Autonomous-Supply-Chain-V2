@@ -304,9 +304,10 @@ export function renderGraph(container, opts = {}) {
         }
       }
     },
-    /* dim everything except the affected nodes (no edge highlighting) */
-    highlightAlert(event, originIds = []) {
-      const affN = new Set(event?.affected_model_objects?.nodes || []);
+    /* dim everything except the affected nodes (no edge highlighting).
+       extraIds widens the scope, e.g. the nodes an intervention acts on. */
+    highlightAlert(event, originIds = [], extraIds = []) {
+      const affN = new Set([...(event?.affected_model_objects?.nodes || []), ...extraIds]);
       const on = !!event;
       for (const [id, g] of Object.entries(nodeEls)) {
         g.classList.toggle('dimmed', on && !affN.has(id) && !originIds.includes(id));

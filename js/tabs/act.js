@@ -25,6 +25,38 @@ function simEconomics(event, intervention) {
 }
 import { DECISION_LAYER } from '../data.generated.js';
 
+/* the nodes each intervention physically acts on (beyond the event's own
+   affected set) — highlighted on the mesh and walked step by step */
+const INTERVENTION_NODES = {
+  expedite_current_reefer: ['cold_dc_central', 'retailer_dc_walmart_sams'],
+  ship_replacement_from_southeast_dc: ['cold_dc_southeast', 'retailer_dc_walmart_sams'],
+  split_replacement_central_and_southeast_dc: ['cold_dc_central', 'cold_dc_southeast', 'retailer_dc_walmart_sams'],
+  overtime_longmont_and_scottsville: ['plant_longmont_frozen_sandwich', 'plant_scottsville_frozen_sandwich', 'frozen_inventory_mccalla'],
+  drawdown_mccalla_fg_and_replenish_later: ['frozen_inventory_mccalla', 'cold_dc_southeast'],
+  shift_southeast_orders_to_central_dc: ['cold_dc_central', 'cold_dc_southeast', 'retailer_dc_walmart_sams'],
+  temporary_3PL_overflow_west: ['cold_dc_west', 'frozen_inventory_longmont'],
+  reroute_longmont_output_to_central_dc: ['frozen_inventory_longmont', 'cold_dc_west', 'cold_dc_central'],
+  slow_production_release_from_longmont: ['plant_longmont_frozen_sandwich', 'frozen_inventory_longmont', 'cold_dc_west'],
+  forward_buy_8_weeks_peanuts: ['supplier_peanuts_southeast_contract', 'supplier_peanuts_regional_fast_response', 'inventory_peanut_receiving'],
+  shift_20_pct_to_regional_fast_supplier: ['supplier_peanuts_southeast_contract', 'supplier_peanuts_regional_fast_response', 'inventory_peanut_receiving'],
+  hedge_or_contract_extension: ['supplier_peanuts_southeast_contract', 'inventory_peanut_receiving'],
+  forward_buy_6_weeks_fruit_base: ['supplier_fruit_west_bulk', 'supplier_fruit_midwest_fast_response', 'inventory_fruit_base_receiving'],
+  prequalify_secondary_midwest_capacity: ['supplier_fruit_midwest_fast_response', 'inventory_fruit_base_receiving'],
+  reformulate_supplier_mix_with_approved_equivalent: ['supplier_fruit_west_bulk', 'supplier_fruit_midwest_fast_response', 'processing_fruit_spread_network'],
+  forward_buy_10_weeks_packaging: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
+  dual_source_carton_converter: ['supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
+  reserve_converter_capacity: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter', 'inventory_packaging_receiving'],
+};
+
+function actionNodes(event, intervention) {
+  const set = new Set([
+    ...(ALERT_META[event.id]?.origins || []),
+    ...(intervention ? (INTERVENTION_NODES[intervention.id] || []) : []),
+    ...(event.affected_model_objects?.nodes || []),
+  ]);
+  return [...set].filter(id => nodesById[id]);
+}
+
 const EVENT_TO_PLAYBOOK = {
   TAC_001_late_reefer_to_walmart_sams_dc: 'shipment_delay',
   TAC_002_mccalla_line_downtime_capacity_loss: 'plant_capacity_loss',
@@ -121,7 +153,8 @@ export function renderAct(view, ctx) {
   function showEventOnGraph() {
     const e = currentEvent();
     const m = ALERT_META[e.id];
-    graph.highlightAlert(e, m.origins);
+    /* highlight every node this intervention acts on, not just the event's own */
+    graph.highlightAlert(e, m.origins, actionNodes(e, currentIntervention()));
     graph.setAlerts(Object.fromEntries(m.origins.map(o => [o, [e.id]])));
     graph.setAgentBadge(m.origins[0]);
     if (scenarioPlayer) scenarioPlayer.destroy();
@@ -219,6 +252,9 @@ avoided cost ${money(sim.avoided)}${sim.recovery != null ? `; service recovery $
 
 AVAILABLE SOURCE SYSTEMS (query/transact only against these): ${systems.join('; ')}
 
+NODES TO ACT ON — assign your step.node values so the execution walks across ALL of these, piece by piece:
+${actionNodes(event, intervention).join(', ')}
+
 Execute this intervention now.`,
       },
     ];
@@ -281,7 +317,7 @@ Execute this intervention now.`,
     const pb = playbookFor(event, intervention);
     const sim = simEconomics(event, intervention);
     const systems = sourceSystemsFor(event);
-    const nodes = event.affected_model_objects?.nodes || [];
+    const nodes = actionNodes(event, intervention); // walk EVERY node the intervention touches
     const rels = event.affected_model_objects?.relationships || [];
     const assume = event.scenario_assumptions || {};
     const sys = (rx, fallback) => systems.find(s => rx.test(s)) || fallback;
@@ -326,9 +362,16 @@ Execute this intervention now.`,
         { system: sys(/WMS/i, 'WMS_inventory'), action: 'Reserve storage capacity and create inbound appointments for the additional volume', call: 'WMS POST /appointments (bulk)', payload: { additional_cover_weeks: 8 }, node: nodes.find(n => /inventory/.test(n)) || nodes[0] });
     }
     steps.push(
-      { system: sys(/APS|planning/i, 'APS_deployment_plan'), action: 'Write the intervention back into the planning model: patched lead times, capacities and allocations', call: 'APS PATCH /scenario/commit', payload: (pb?.model_patches || []).slice(0, 3), node: nodes[0] },
-      { system: 'simulation_runtime', action: 'Re-run the DES on the patched graph to verify recovery vs the do-nothing baseline', call: `sim.run(scenario=intervention, horizon=${sim.horizon}d)`, payload: { do_nothing_incremental_usd: Math.round(sim.dnInc), intervention_net_impact_usd: Math.round(sim.net), avoided_cost_usd: Math.round(sim.avoided) }, node: nodes[0] },
+      { system: sys(/APS|planning/i, 'APS_deployment_plan'), action: 'Write the intervention back into the planning model: patched lead times, capacities and allocations', call: 'APS PATCH /scenario/commit', payload: (pb?.model_patches || []).slice(0, 3), node: nodes[2 % nodes.length] },
+      { system: 'simulation_runtime', action: 'Re-run the DES on the patched graph to verify recovery vs the do-nothing baseline', call: `sim.run(scenario=intervention, horizon=${sim.horizon}d)`, payload: { do_nothing_incremental_usd: Math.round(sim.dnInc), intervention_net_impact_usd: Math.round(sim.net), avoided_cost_usd: Math.round(sim.avoided) }, node: nodes[3 % nodes.length] },
       { system: sys(/telemetry|tracking|monitor|EDI/i, 'TMS_carrier_tracking'), action: 'Arm monitoring: subscribe to the alert signal events and set KPI guardrails to auto-close or escalate', call: 'events.subscribe(' + (event.signal_sources?.[0]?.events || []).join(',') + ')', payload: { guardrail: 'OTIF ≥ 95%' }, node: nodes[nodes.length - 1] });
+    /* guarantee the walk covers every action node: reassign duplicate stops */
+    const seen = new Set();
+    const unvisited = () => nodes.filter(n => !seen.has(n));
+    for (const s of steps) {
+      if (!s.node || !nodesById[s.node] || (seen.has(s.node) && unvisited().length)) s.node = unvisited()[0] || s.node;
+      seen.add(s.node);
+    }
     const summary = `Executed ${pretty(intervention.id)}: simulated net impact ${money(sim.net, { plus: true })} vs BAU on the ${sim.horizon}-day horizon, against ${money(sim.dnInc, { plus: true })} if we did nothing — ${money(sim.avoided)} avoided` +
       (sim.recovery != null ? `, service recovery ${sim.recovery}%.` : ' (buffers held, no service loss).') +
       ` Residual risk: ${pretty(intervention.risk ?? intervention.residual_risk ?? 'low')}. Monitoring armed on ${pretty(event.signal_sources?.[0]?.system || 'source systems')}.`;
