@@ -3,7 +3,7 @@
 import { renderSense } from './tabs/sense.js?v=sensefix';
 import { renderSimulate } from './tabs/simulate.js?v=completiongate';
 import { renderIntervene } from './tabs/intervene.js?v=actualsim';
-import { renderAct } from './tabs/act.js?v=actualsim';
+import { renderAct } from './tabs/act.js?v=openaiworkflow';
 import { EVENTS } from './model.js';
 
 const view = document.getElementById('view');

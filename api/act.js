@@ -1,12 +1,12 @@
 // Vercel serverless function: streams OpenAI chat completions for the Act agent.
-// Accepts the key from the request body (user-supplied in the UI) or OPENAI_API_KEY env.
+// The API key stays server-side in the OPENAI_API_KEY environment variable.
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'POST only' });
     return;
   }
-  const { apiKey, messages, model } = req.body || {};
-  const key = (apiKey || process.env.OPENAI_API_KEY || '').trim();
+  const { messages, model } = req.body || {};
+  const key = (process.env.OPENAI_API_KEY || '').trim();
   if (!key) {
     res.status(400).json({ error: 'no_api_key' });
     return;
