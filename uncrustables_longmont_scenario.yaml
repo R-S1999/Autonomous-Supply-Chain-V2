@@ -1,9 +1,22 @@
 model_name: longmont_sugar_oils_delay
 network:
   keep_nodes:
+    - supplier_flour_great_plains_bulk
+    - supplier_flour_regional_fast_response
+    - supplier_peanuts_southeast_contract
+    - supplier_peanuts_regional_fast_response
+    - supplier_fruit_west_bulk
+    - supplier_fruit_midwest_fast_response
     - supplier_sugar_bulk_refiner
     - supplier_oils_fats_regional
+    - supplier_film_wrap_converter
+    - supplier_carton_corrugate_converter
+    - inventory_flour_receiving
+    - inventory_peanut_receiving
+    - inventory_fruit_base_receiving
     - inventory_sugar_oils_receiving
+    - inventory_packaging_receiving
+    - processing_peanut_butter_network
     - processing_fruit_spread_network
     - plant_longmont_frozen_sandwich
     - frozen_inventory_longmont

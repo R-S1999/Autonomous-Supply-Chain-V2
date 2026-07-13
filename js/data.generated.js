@@ -3,6 +3,334 @@
 export const BAU_GRAPH = {
  "nodes": [
   {
+   "id": "supplier_flour_great_plains_bulk",
+   "node_type": "tier_1_supplier",
+   "supply_chain_layer": "raw_material_supplier",
+   "material_family": "wheat_flour",
+   "role": "low_cost_high_volume_flour_supplier",
+   "kpis": [
+    {
+     "name": "contracted_flour_capacity_lb_per_week",
+     "modeled_value": 620000,
+     "unit": "lb_per_week",
+     "source_system": "supplier_onboarding_portal_or_supplier_relationship_management_SRM",
+     "source_events": [
+      "supplier_capacity_questionnaire",
+      "supplier_contract_record",
+      "ERP_vendor_master_capacity_field"
+     ],
+     "calculation": "supplier_declared_weekly_capacity_adjusted_by_approved_contract_share"
+    },
+    {
+     "name": "delivered_flour_cost_usd_per_lb",
+     "modeled_value": 0.31,
+     "unit": "USD_per_lb",
+     "source_system": "ERP_purchasing_contract_and_invoice_matching",
+     "source_events": [
+      "purchase_info_record",
+      "supplier_contract_price_line",
+      "EDI_810_invoice"
+     ],
+     "calculation": "material_price_plus_allocated_freight_plus_accessorial_charges"
+    },
+    {
+     "name": "flour_protein_spec_conformance_pct",
+     "modeled_value": 97.5,
+     "unit": "percent",
+     "source_system": "quality_management_system_QMS_or_laboratory_information_management_system_LIMS",
+     "source_events": [
+      "certificate_of_analysis",
+      "inbound_quality_release",
+      "lot_sampling_result"
+     ],
+     "calculation": "accepted_lots_meeting_protein_and_moisture_spec_divided_by_total_lots_received"
+    },
+    {
+     "name": "low_cost_supplier_allocation_share_pct",
+     "modeled_value": 58,
+     "unit": "percent",
+     "source_system": "advanced_planning_system_APS_or_material_requirements_planning_MRP",
+     "source_events": [
+      "weekly_supply_plan",
+      "supplier_allocation_rule"
+     ],
+     "calculation": "approved_weekly_volume_from_supplier_divided_by_total_flour_requirement"
+    }
+   ]
+  },
+  {
+   "id": "supplier_flour_regional_fast_response",
+   "node_type": "tier_1_supplier",
+   "supply_chain_layer": "raw_material_supplier",
+   "material_family": "wheat_flour",
+   "role": "high_service_short_lead_time_flour_supplier",
+   "kpis": [
+    {
+     "name": "surge_flour_capacity_lb_per_week",
+     "modeled_value": 280000,
+     "unit": "lb_per_week",
+     "source_system": "supplier_onboarding_portal_or_supplier_relationship_management_SRM",
+     "source_events": [
+      "supplier_capacity_questionnaire",
+      "contingency_supply_approval"
+     ],
+     "calculation": "supplier_committed_surge_capacity_for_7_day_window"
+    },
+    {
+     "name": "expedited_flour_cost_usd_per_lb",
+     "modeled_value": 0.38,
+     "unit": "USD_per_lb",
+     "source_system": "ERP_purchasing_and_transportation_management_system_TMS",
+     "source_events": [
+      "spot_purchase_order",
+      "freight_rate_confirmation",
+      "EDI_810_invoice"
+     ],
+     "calculation": "spot_material_price_plus_dedicated_truck_cost"
+    },
+    {
+     "name": "same_week_acceptance_rate_pct",
+     "modeled_value": 94,
+     "unit": "percent",
+     "source_system": "supplier_portal_and_EDI_gateway",
+     "source_events": [
+      "EDI_850_purchase_order",
+      "EDI_855_purchase_order_acknowledgement"
+     ],
+     "calculation": "same_week_orders_accepted_divided_by_same_week_orders_issued"
+    },
+    {
+     "name": "short_lead_time_premium_usd_per_lb",
+     "modeled_value": 0.07,
+     "unit": "USD_per_lb",
+     "source_system": "ERP_contract_comparison_dashboard",
+     "source_events": [
+      "price_condition_record",
+      "awarded_supplier_split"
+     ],
+     "calculation": "expedited_flour_cost_usd_per_lb_minus_low_cost_bulk_flour_cost_usd_per_lb"
+    }
+   ]
+  },
+  {
+   "id": "supplier_peanuts_southeast_contract",
+   "node_type": "tier_1_supplier",
+   "supply_chain_layer": "raw_material_supplier",
+   "material_family": "shelled_peanuts",
+   "role": "long_term_contract_peanut_supplier",
+   "kpis": [
+    {
+     "name": "contract_peanut_volume_lb_per_week",
+     "modeled_value": 760000,
+     "unit": "lb_per_week",
+     "source_system": "ERP_purchasing_contract_and_supplier_relationship_management_SRM",
+     "source_events": [
+      "annual_peanut_contract",
+      "supplier_allocation_schedule"
+     ],
+     "calculation": "annual_contract_volume_divided_by_52_adjusted_for_crop_seasonality"
+    },
+    {
+     "name": "contract_peanut_cost_usd_per_lb",
+     "modeled_value": 0.82,
+     "unit": "USD_per_lb",
+     "source_system": "ERP_commodity_contract_management",
+     "source_events": [
+      "long_term_purchase_contract",
+      "commodity_hedge_reference",
+      "supplier_invoice"
+     ],
+     "calculation": "contract_price_plus_handling_plus_allocated_inbound_freight"
+    },
+    {
+     "name": "aflatoxin_lot_clearance_pct",
+     "modeled_value": 98.6,
+     "unit": "percent",
+     "source_system": "quality_management_system_QMS_or_laboratory_information_management_system_LIMS",
+     "source_events": [
+      "certificate_of_analysis",
+      "aflatoxin_test_result",
+      "goods_receipt_quality_hold_release"
+     ],
+     "calculation": "lots_released_after_quality_testing_divided_by_lots_received"
+    },
+    {
+     "name": "crop_cover_months_committed",
+     "modeled_value": 6,
+     "unit": "months",
+     "source_system": "supplier_onboarding_portal_and_commodity_procurement_workbench",
+     "source_events": [
+      "supplier_crop_position_report",
+      "procurement_contract_review"
+     ],
+     "calculation": "committed_contract_inventory_position_divided_by_monthly_peanut_requirement"
+    }
+   ]
+  },
+  {
+   "id": "supplier_peanuts_regional_fast_response",
+   "node_type": "tier_1_supplier",
+   "supply_chain_layer": "raw_material_supplier",
+   "material_family": "shelled_peanuts",
+   "role": "high_cost_short_lead_time_peanut_supplier",
+   "kpis": [
+    {
+     "name": "emergency_peanut_capacity_lb_per_week",
+     "modeled_value": 230000,
+     "unit": "lb_per_week",
+     "source_system": "supplier_relationship_management_SRM_and_supplier_portal",
+     "source_events": [
+      "contingency_supplier_approval",
+      "weekly_available_to_promise_message"
+     ],
+     "calculation": "supplier_confirmed_available_capacity_for_current_week"
+    },
+    {
+     "name": "emergency_peanut_cost_usd_per_lb",
+     "modeled_value": 0.96,
+     "unit": "USD_per_lb",
+     "source_system": "ERP_spot_procurement_and_TMS_freight_audit",
+     "source_events": [
+      "spot_purchase_order",
+      "freight_invoice",
+      "supplier_invoice"
+     ],
+     "calculation": "spot_material_cost_plus_rush_freight_cost"
+    },
+    {
+     "name": "allergen_traceability_completeness_pct",
+     "modeled_value": 99.2,
+     "unit": "percent",
+     "source_system": "QMS_LIMS_and_ERP_batch_management",
+     "source_events": [
+      "supplier_lot_trace_record",
+      "allergen_statement",
+      "inbound_batch_record"
+     ],
+     "calculation": "inbound_lots_with_complete_lot_and_allergen_documentation_divided_by_total_lots"
+    },
+    {
+     "name": "supply_recovery_time_days",
+     "modeled_value": 3,
+     "unit": "days",
+     "source_system": "supplier_portal_and_advanced_planning_system_APS",
+     "source_events": [
+      "shortage_alert",
+      "supplier_recovery_commitment"
+     ],
+     "calculation": "committed_recovery_delivery_date_minus_shortage_alert_date"
+    }
+   ]
+  },
+  {
+   "id": "supplier_fruit_west_bulk",
+   "node_type": "tier_1_supplier",
+   "supply_chain_layer": "raw_material_supplier",
+   "material_family": "fruit_base",
+   "role": "low_cost_seasonal_bulk_fruit_base_supplier",
+   "kpis": [
+    {
+     "name": "frozen_fruit_base_capacity_lb_per_week",
+     "modeled_value": 390000,
+     "unit": "lb_per_week",
+     "source_system": "supplier_onboarding_portal_or_supplier_relationship_management_SRM",
+     "source_events": [
+      "seasonal_capacity_declaration",
+      "frozen_storage_capacity_certificate"
+     ],
+     "calculation": "supplier_declared_weekly_ship_capacity_for_frozen_fruit_base"
+    },
+    {
+     "name": "bulk_fruit_base_cost_usd_per_lb",
+     "modeled_value": 0.64,
+     "unit": "USD_per_lb",
+     "source_system": "ERP_contract_pricing_and_TMS_freight_audit",
+     "source_events": [
+      "fruit_base_contract",
+      "refrigerated_lane_rate",
+      "supplier_invoice"
+     ],
+     "calculation": "contracted_fruit_base_price_plus_refrigerated_transport_cost"
+    },
+    {
+     "name": "brix_spec_hit_rate_pct",
+     "modeled_value": 96.8,
+     "unit": "percent",
+     "source_system": "QMS_LIMS",
+     "source_events": [
+      "certificate_of_analysis",
+      "inbound_brix_test"
+     ],
+     "calculation": "received_lots_within_brix_spec_divided_by_total_fruit_base_lots"
+    },
+    {
+     "name": "seasonal_buffer_cover_days",
+     "modeled_value": 45,
+     "unit": "days",
+     "source_system": "supplier_inventory_portal_and_ERP_supplier_collaboration",
+     "source_events": [
+      "supplier_stock_position_file",
+      "weekly_supply_review"
+     ],
+     "calculation": "supplier_available_frozen_fruit_stock_divided_by_average_daily_fruit_base_requirement"
+    }
+   ]
+  },
+  {
+   "id": "supplier_fruit_midwest_fast_response",
+   "node_type": "tier_1_supplier",
+   "supply_chain_layer": "raw_material_supplier",
+   "material_family": "fruit_base",
+   "role": "high_service_regional_fruit_base_supplier",
+   "kpis": [
+    {
+     "name": "short_cycle_fruit_base_capacity_lb_per_week",
+     "modeled_value": 180000,
+     "unit": "lb_per_week",
+     "source_system": "supplier_relationship_management_SRM_and_supplier_portal",
+     "source_events": [
+      "weekly_capacity_commit",
+      "co_packer_availability_update"
+     ],
+     "calculation": "supplier_committed_short_cycle_capacity_for_next_14_days"
+    },
+    {
+     "name": "short_cycle_fruit_base_cost_usd_per_lb",
+     "modeled_value": 0.78,
+     "unit": "USD_per_lb",
+     "source_system": "ERP_contract_pricing_and_supplier_invoice",
+     "source_events": [
+      "purchase_order_price_condition",
+      "EDI_810_invoice"
+     ],
+     "calculation": "spot_or_short_cycle_material_price_plus_freight"
+    },
+    {
+     "name": "recipe_switch_flexibility_hours",
+     "modeled_value": 12,
+     "unit": "hours",
+     "source_system": "supplier_manufacturing_commitment_file_and_SRM",
+     "source_events": [
+      "supplier_changeover_commitment",
+      "weekly_production_calendar"
+     ],
+     "calculation": "earliest_confirmed_recipe_switch_time_minus_request_time"
+    },
+    {
+     "name": "fruit_base_rush_order_fill_rate_pct",
+     "modeled_value": 91,
+     "unit": "percent",
+     "source_system": "EDI_gateway_and_ERP_order_history",
+     "source_events": [
+      "EDI_850_purchase_order",
+      "EDI_855_purchase_order_acknowledgement",
+      "goods_receipt"
+     ],
+     "calculation": "rush_orders_filled_in_full_divided_by_total_rush_orders"
+    }
+   ]
+  },
+  {
    "id": "supplier_sugar_bulk_refiner",
    "node_type": "tier_1_supplier",
    "supply_chain_layer": "raw_material_supplier",
@@ -112,6 +440,385 @@ export const BAU_GRAPH = {
    ]
   },
   {
+   "id": "supplier_film_wrap_converter",
+   "node_type": "tier_1_supplier",
+   "supply_chain_layer": "packaging_supplier",
+   "material_family": "primary_film_wrapper",
+   "role": "individual_sandwich_wrap_supplier",
+   "kpis": [
+    {
+     "name": "wrapper_capacity_units_per_week",
+     "modeled_value": 35000000,
+     "unit": "wrappers_per_week",
+     "source_system": "supplier_relationship_management_SRM_and_packaging_supplier_portal",
+     "source_events": [
+      "packaging_capacity_commit",
+      "weekly_available_to_promise_message"
+     ],
+     "calculation": "supplier_committed_wrapper_output_for_next_4_weeks"
+    },
+    {
+     "name": "wrapper_cost_usd_per_1000_units",
+     "modeled_value": 6.5,
+     "unit": "USD_per_1000_wrappers",
+     "source_system": "ERP_packaging_contract_and_supplier_invoice",
+     "source_events": [
+      "packaging_price_condition_record",
+      "EDI_810_invoice"
+     ],
+     "calculation": "contracted_wrapper_price_plus_plate_and_freight_amortization"
+    },
+    {
+     "name": "seal_integrity_defect_ppm",
+     "modeled_value": 420,
+     "unit": "parts_per_million",
+     "source_system": "MES_packaging_line_quality_and_QMS",
+     "source_events": [
+      "line_defect_scan",
+      "packaging_supplier_lot_record"
+     ],
+     "calculation": "seal_defect_count_divided_by_wrappers_consumed_times_1000000"
+    },
+    {
+     "name": "print_changeover_freeze_window_days",
+     "modeled_value": 14,
+     "unit": "days",
+     "source_system": "packaging_artwork_workflow_and_SRM",
+     "source_events": [
+      "artwork_release_date",
+      "supplier_print_slot_confirmation"
+     ],
+     "calculation": "confirmed_print_slot_date_minus_artwork_release_date"
+    }
+   ]
+  },
+  {
+   "id": "supplier_carton_corrugate_converter",
+   "node_type": "tier_1_supplier",
+   "supply_chain_layer": "packaging_supplier",
+   "material_family": "cartons_and_cases",
+   "role": "retail_carton_and_master_case_supplier",
+   "kpis": [
+    {
+     "name": "carton_capacity_units_per_week",
+     "modeled_value": 3300000,
+     "unit": "cartons_per_week",
+     "source_system": "supplier_relationship_management_SRM_and_packaging_supplier_portal",
+     "source_events": [
+      "carton_capacity_commit",
+      "paperboard_allocation_notice"
+     ],
+     "calculation": "supplier_committed_retail_carton_capacity_for_next_4_weeks"
+    },
+    {
+     "name": "master_case_capacity_units_per_week",
+     "modeled_value": 550000,
+     "unit": "cases_per_week",
+     "source_system": "supplier_relationship_management_SRM",
+     "source_events": [
+      "corrugate_capacity_commit",
+      "weekly_supplier_update"
+     ],
+     "calculation": "supplier_committed_master_case_capacity_for_next_4_weeks"
+    },
+    {
+     "name": "carton_cost_usd_per_1000_units",
+     "modeled_value": 210,
+     "unit": "USD_per_1000_cartons",
+     "source_system": "ERP_packaging_contract_and_supplier_invoice",
+     "source_events": [
+      "packaging_price_condition_record",
+      "EDI_810_invoice"
+     ],
+     "calculation": "contracted_carton_price_plus_freight_and_setup_amortization"
+    },
+    {
+     "name": "case_crush_claim_rate_pct",
+     "modeled_value": 0.35,
+     "unit": "percent",
+     "source_system": "WMS_damage_log_and_supplier_claims_portal",
+     "source_events": [
+      "receiving_damage_report",
+      "supplier_quality_claim"
+     ],
+     "calculation": "damaged_cases_claimed_divided_by_cases_received"
+    }
+   ]
+  },
+  {
+   "id": "inventory_flour_receiving",
+   "node_type": "inventory_buffer",
+   "supply_chain_layer": "raw_material_inventory",
+   "material_family": "wheat_flour",
+   "role": "flour_receiving_and_staging_inventory",
+   "kpis": [
+    {
+     "name": "flour_days_of_cover",
+     "modeled_value": 7,
+     "unit": "days",
+     "source_system": "warehouse_management_system_WMS_and_ERP_material_requirements_planning_MRP",
+     "source_events": [
+      "WMS_on_hand_lot_balance",
+      "production_consumption_posting",
+      "planned_order_requirement"
+     ],
+     "calculation": "unrestricted_flour_inventory_lb_divided_by_average_daily_flour_consumption_lb"
+    },
+    {
+     "name": "flour_weekly_consumption_lb",
+     "modeled_value": 1050000,
+     "unit": "lb_per_week",
+     "source_system": "manufacturing_execution_system_MES_and_ERP_batch_consumption",
+     "source_events": [
+      "process_order_confirmation",
+      "goods_issue_to_production"
+     ],
+     "calculation": "sum_of_flour_goods_issue_quantities_for_latest_rolling_7_days"
+    },
+    {
+     "name": "flour_lot_age_p90_days",
+     "modeled_value": 9,
+     "unit": "days",
+     "source_system": "WMS_lot_traceability",
+     "source_events": [
+      "goods_receipt_timestamp",
+      "lot_issue_timestamp"
+     ],
+     "calculation": "p90_lot_issue_timestamp_minus_goods_receipt_timestamp_for_flour_lots"
+    },
+    {
+     "name": "flour_receiving_queue_hours",
+     "modeled_value": 6,
+     "unit": "hours",
+     "source_system": "yard_management_system_and_WMS",
+     "source_events": [
+      "truck_gate_in",
+      "dock_assignment",
+      "goods_receipt_completion"
+     ],
+     "calculation": "goods_receipt_completion_timestamp_minus_truck_gate_in_timestamp"
+    },
+    {
+     "name": "raw_material_storage_cost_usd_per_lb_day",
+     "modeled_value": 0.00018,
+     "unit": "USD_per_lb_day",
+     "source_system": "WMS_inventory_balance_plus_finance_cost_center_allocation",
+     "source_events": [
+      "daily_inventory_snapshot",
+      "warehouse_cost_allocation",
+      "pallet_position_occupancy"
+     ],
+     "calculation": "allocated_storage_labor_rent_utilities_divided_by_average_lb_on_hand_per_day"
+    },
+    {
+     "name": "inventory_carrying_cost_pct_annual",
+     "modeled_value": 11.5,
+     "unit": "percent_per_year",
+     "source_system": "finance_working_capital_model_or_ERP_inventory_valuation",
+     "source_events": [
+      "monthly_inventory_valuation",
+      "weighted_average_cost_update",
+      "treasury_cost_of_capital_rate"
+     ],
+     "calculation": "annual_cost_of_capital_plus_insurance_plus_shrink_allowance_as_pct_of_inventory_value"
+    },
+    {
+     "name": "age_related_writeoff_cost_usd_per_lb",
+     "modeled_value": 0.04,
+     "unit": "USD_per_lb_at_risk",
+     "source_system": "WMS_lot_ageing_plus_QMS_disposition",
+     "source_events": [
+      "lot_ageing_report",
+      "quality_hold_extension",
+      "expired_or_disposed_lot"
+     ],
+     "calculation": "writeoff_value_for_expired_or_rejected_lots_divided_by_aged_lb_at_risk"
+    }
+   ]
+  },
+  {
+   "id": "inventory_peanut_receiving",
+   "node_type": "inventory_buffer",
+   "supply_chain_layer": "raw_material_inventory",
+   "material_family": "shelled_peanuts",
+   "role": "peanut_receiving_quality_hold_and_release_inventory",
+   "kpis": [
+    {
+     "name": "peanut_days_of_cover",
+     "modeled_value": 12,
+     "unit": "days",
+     "source_system": "WMS_and_ERP_batch_management",
+     "source_events": [
+      "WMS_on_hand_batch_balance",
+      "batch_quality_release",
+      "production_consumption_posting"
+     ],
+     "calculation": "quality_released_peanut_inventory_lb_divided_by_average_daily_peanut_consumption_lb"
+    },
+    {
+     "name": "peanut_weekly_consumption_lb",
+     "modeled_value": 970000,
+     "unit": "lb_per_week",
+     "source_system": "MES_and_ERP_goods_issue_to_process_order",
+     "source_events": [
+      "peanut_butter_process_order",
+      "goods_issue_to_production"
+     ],
+     "calculation": "sum_of_peanut_goods_issues_for_latest_rolling_7_days"
+    },
+    {
+     "name": "peanut_quality_hold_days_average",
+     "modeled_value": 1.5,
+     "unit": "days",
+     "source_system": "QMS_LIMS_and_WMS_quality_status",
+     "source_events": [
+      "lot_sample_taken",
+      "lab_result_posted",
+      "quality_release"
+     ],
+     "calculation": "quality_release_timestamp_minus_goods_receipt_timestamp"
+    },
+    {
+     "name": "peanut_supplier_concentration_pct_top_supplier",
+     "modeled_value": 62,
+     "unit": "percent",
+     "source_system": "ERP_procurement_analytics",
+     "source_events": [
+      "purchase_order_history",
+      "supplier_goods_receipt_history"
+     ],
+     "calculation": "largest_supplier_receipt_volume_lb_divided_by_total_peanut_receipt_volume_lb"
+    },
+    {
+     "name": "raw_material_storage_cost_usd_per_lb_day",
+     "modeled_value": 0.00024,
+     "unit": "USD_per_lb_day",
+     "source_system": "WMS_inventory_balance_plus_finance_cost_center_allocation",
+     "source_events": [
+      "daily_inventory_snapshot",
+      "warehouse_cost_allocation",
+      "pallet_position_occupancy"
+     ],
+     "calculation": "allocated_storage_labor_rent_utilities_divided_by_average_lb_on_hand_per_day"
+    },
+    {
+     "name": "inventory_carrying_cost_pct_annual",
+     "modeled_value": 11.5,
+     "unit": "percent_per_year",
+     "source_system": "finance_working_capital_model_or_ERP_inventory_valuation",
+     "source_events": [
+      "monthly_inventory_valuation",
+      "weighted_average_cost_update",
+      "treasury_cost_of_capital_rate"
+     ],
+     "calculation": "annual_cost_of_capital_plus_insurance_plus_shrink_allowance_as_pct_of_inventory_value"
+    },
+    {
+     "name": "age_related_writeoff_cost_usd_per_lb",
+     "modeled_value": 0.07,
+     "unit": "USD_per_lb_at_risk",
+     "source_system": "WMS_lot_ageing_plus_QMS_disposition",
+     "source_events": [
+      "lot_ageing_report",
+      "quality_hold_extension",
+      "expired_or_disposed_lot"
+     ],
+     "calculation": "writeoff_value_for_expired_or_rejected_lots_divided_by_aged_lb_at_risk"
+    }
+   ]
+  },
+  {
+   "id": "inventory_fruit_base_receiving",
+   "node_type": "inventory_buffer",
+   "supply_chain_layer": "raw_material_inventory",
+   "material_family": "fruit_base",
+   "role": "frozen_or_preserved_fruit_base_receiving_inventory",
+   "kpis": [
+    {
+     "name": "fruit_base_days_of_cover",
+     "modeled_value": 18,
+     "unit": "days",
+     "source_system": "WMS_and_ERP_batch_management",
+     "source_events": [
+      "WMS_on_hand_batch_balance",
+      "fruit_spread_process_order_consumption"
+     ],
+     "calculation": "quality_released_fruit_base_inventory_lb_divided_by_average_daily_fruit_base_consumption_lb"
+    },
+    {
+     "name": "fruit_base_weekly_consumption_lb",
+     "modeled_value": 250000,
+     "unit": "lb_per_week",
+     "source_system": "MES_recipe_consumption_and_ERP_goods_issue",
+     "source_events": [
+      "fruit_spread_batch_confirmation",
+      "goods_issue_to_production"
+     ],
+     "calculation": "sum_of_fruit_base_goods_issues_for_latest_rolling_7_days"
+    },
+    {
+     "name": "frozen_fruit_temperature_excursions_per_week",
+     "modeled_value": 2,
+     "unit": "excursions_per_week",
+     "source_system": "cold_chain_temperature_telemetry_and_WMS",
+     "source_events": [
+      "temperature_sensor_reading",
+      "reefer_trailer_download",
+      "receiving_exception_log"
+     ],
+     "calculation": "count_of_lot_temperature_readings_above_threshold_during_receiving_week"
+    },
+    {
+     "name": "fruit_base_lot_blendability_score",
+     "modeled_value": 0.87,
+     "unit": "index_0_to_1",
+     "source_system": "QMS_LIMS_and_recipe_management_system",
+     "source_events": [
+      "brix_result",
+      "acidity_result",
+      "color_score"
+     ],
+     "calculation": "weighted_quality_score_for_brix_acidity_and_color_fit_to_target_recipe"
+    },
+    {
+     "name": "raw_material_storage_cost_usd_per_lb_day",
+     "modeled_value": 0.00042,
+     "unit": "USD_per_lb_day",
+     "source_system": "WMS_inventory_balance_plus_finance_cost_center_allocation",
+     "source_events": [
+      "daily_inventory_snapshot",
+      "warehouse_cost_allocation",
+      "pallet_position_occupancy"
+     ],
+     "calculation": "allocated_storage_labor_rent_utilities_divided_by_average_lb_on_hand_per_day"
+    },
+    {
+     "name": "inventory_carrying_cost_pct_annual",
+     "modeled_value": 11.5,
+     "unit": "percent_per_year",
+     "source_system": "finance_working_capital_model_or_ERP_inventory_valuation",
+     "source_events": [
+      "monthly_inventory_valuation",
+      "weighted_average_cost_update",
+      "treasury_cost_of_capital_rate"
+     ],
+     "calculation": "annual_cost_of_capital_plus_insurance_plus_shrink_allowance_as_pct_of_inventory_value"
+    },
+    {
+     "name": "age_related_writeoff_cost_usd_per_lb",
+     "modeled_value": 0.12,
+     "unit": "USD_per_lb_at_risk",
+     "source_system": "WMS_lot_ageing_plus_QMS_disposition",
+     "source_events": [
+      "lot_ageing_report",
+      "quality_hold_extension",
+      "expired_or_disposed_lot"
+     ],
+     "calculation": "writeoff_value_for_expired_or_rejected_lots_divided_by_aged_lb_at_risk"
+    }
+   ]
+  },
+  {
    "id": "inventory_sugar_oils_receiving",
    "node_type": "inventory_buffer",
    "supply_chain_layer": "raw_material_inventory",
@@ -198,6 +905,162 @@ export const BAU_GRAPH = {
       "expired_or_disposed_lot"
      ],
      "calculation": "writeoff_value_for_expired_or_rejected_lots_divided_by_aged_lb_at_risk"
+    }
+   ]
+  },
+  {
+   "id": "inventory_packaging_receiving",
+   "node_type": "inventory_buffer",
+   "supply_chain_layer": "packaging_inventory",
+   "material_family": "film_cartons_cases",
+   "role": "primary_and_secondary_packaging_inventory",
+   "kpis": [
+    {
+     "name": "wrapper_days_of_cover",
+     "modeled_value": 9,
+     "unit": "days",
+     "source_system": "WMS_and_MES_packaging_consumption",
+     "source_events": [
+      "packaging_on_hand_balance",
+      "wrapper_backflush_consumption"
+     ],
+     "calculation": "wrapper_units_on_hand_divided_by_average_daily_wrapper_consumption"
+    },
+    {
+     "name": "carton_days_of_cover",
+     "modeled_value": 11,
+     "unit": "days",
+     "source_system": "WMS_and_MES_packaging_consumption",
+     "source_events": [
+      "carton_on_hand_balance",
+      "carton_backflush_consumption"
+     ],
+     "calculation": "carton_units_on_hand_divided_by_average_daily_carton_consumption"
+    },
+    {
+     "name": "packaging_weekly_consumption_wrappers",
+     "modeled_value": 28850000,
+     "unit": "wrappers_per_week",
+     "source_system": "MES_packaging_line_backflush",
+     "source_events": [
+      "finished_unit_confirmation",
+      "wrapper_backflush"
+     ],
+     "calculation": "sandwiches_packed_plus_wrapper_scrap_units"
+    },
+    {
+     "name": "packaging_artwork_obsolescence_risk_units",
+     "modeled_value": 1200000,
+     "unit": "units_at_risk",
+     "source_system": "product_lifecycle_management_PLM_and_WMS",
+     "source_events": [
+      "artwork_revision_release",
+      "packaging_lot_inventory_balance"
+     ],
+     "calculation": "packaging_units_with_superseded_artwork_version_still_on_hand"
+    },
+    {
+     "name": "packaging_storage_cost_usd_per_pallet_day",
+     "modeled_value": 0.72,
+     "unit": "USD_per_pallet_day",
+     "source_system": "WMS_packaging_inventory_plus_facility_cost_allocation",
+     "source_events": [
+      "packaging_pallet_inventory_snapshot",
+      "warehouse_bin_occupancy",
+      "monthly_cost_allocation"
+     ],
+     "calculation": "packaging_storage_cost_pool_divided_by_packaging_pallet_days"
+    },
+    {
+     "name": "packaging_obsolescence_cost_usd_per_1000_units",
+     "modeled_value": 1.4,
+     "unit": "USD_per_1000_units_at_risk",
+     "source_system": "ERP_material_master_plus_change_control_system",
+     "source_events": [
+      "artwork_change_notice",
+      "SKU_phaseout_notice",
+      "packaging_scrap_transaction"
+     ],
+     "calculation": "scrapped_or_obsolete_packaging_value_divided_by_units_at_risk_times_1000"
+    }
+   ]
+  },
+  {
+   "id": "processing_peanut_butter_network",
+   "node_type": "secondary_processing",
+   "supply_chain_layer": "ingredient_processing",
+   "material_family": "peanut_butter",
+   "role": "peanut_roasting_grinding_and_bulk_peanut_butter_supply",
+   "kpis": [
+    {
+     "name": "peanut_butter_output_lb_per_week",
+     "modeled_value": 1080000,
+     "unit": "lb_per_week",
+     "source_system": "MES_process_order_confirmation",
+     "source_events": [
+      "roast_batch_confirmation",
+      "grind_batch_confirmation",
+      "bulk_peanut_butter_goods_receipt"
+     ],
+     "calculation": "confirmed_good_output_quantity_from_peanut_butter_process_orders"
+    },
+    {
+     "name": "roast_grind_yield_pct",
+     "modeled_value": 92.5,
+     "unit": "percent",
+     "source_system": "MES_and_ERP_material_balance",
+     "source_events": [
+      "peanut_goods_issue",
+      "peanut_butter_goods_receipt",
+      "scrap_posting"
+     ],
+     "calculation": "peanut_butter_good_output_lb_divided_by_peanut_input_lb"
+    },
+    {
+     "name": "peanut_butter_bulk_hold_days",
+     "modeled_value": 5,
+     "unit": "days",
+     "source_system": "WMS_tank_inventory_and_ERP_batch_management",
+     "source_events": [
+      "bulk_tank_receipt",
+      "transfer_to_sandwich_plant"
+     ],
+     "calculation": "bulk_peanut_butter_inventory_lb_divided_by_average_daily_bulk_peanut_butter_shipments"
+    },
+    {
+     "name": "allergen_cleaning_downtime_hours_per_week",
+     "modeled_value": 14,
+     "unit": "hours_per_week",
+     "source_system": "MES_sanitation_log_and_enterprise_asset_management_EAM",
+     "source_events": [
+      "sanitation_work_order",
+      "line_restart_clearance"
+     ],
+     "calculation": "sum_of_cleaning_work_order_end_time_minus_start_time_for_peanut_lines"
+    },
+    {
+     "name": "peanut_butter_conversion_cost_usd_per_lb",
+     "modeled_value": 0.11,
+     "unit": "USD_per_lb",
+     "source_system": "MES_batch_confirmation_plus_finance_standard_costing",
+     "source_events": [
+      "roasting_batch_confirmation",
+      "grinding_batch_confirmation",
+      "standard_cost_rollup"
+     ],
+     "calculation": "labor_energy_depreciation_and_overhead_allocated_to_accepted_peanut_butter_lb"
+    },
+    {
+     "name": "peanut_butter_yield_loss_cost_usd_per_lb_input",
+     "modeled_value": 0.018,
+     "unit": "USD_per_lb_input",
+     "source_system": "MES_material_consumption_plus_QMS_scrap_disposition",
+     "source_events": [
+      "batch_input_issue",
+      "accepted_output_confirmation",
+      "scrap_disposition"
+     ],
+     "calculation": "input_value_minus_accepted_output_value_divided_by_input_lb"
     }
    ]
   },
@@ -641,6 +1504,401 @@ export const BAU_GRAPH = {
  ],
  "relationships": [
   {
+   "id": "rel_flour_bulk_to_flour_inventory",
+   "from": "supplier_flour_great_plains_bulk",
+   "to": "inventory_flour_receiving",
+   "relationship_type": "inbound_raw_material_supply",
+   "material": "wheat_flour",
+   "modeled_weekly_flow_lb": 610000,
+   "lead_time": {
+    "modeled_mean_days": 5,
+    "modeled_p90_days": 8,
+    "source_systems": [
+     "ERP_purchase_order_release",
+     "EDI_856_advanced_shipping_notice",
+     "EDI_214_transportation_carrier_status",
+     "WMS_goods_receipt"
+    ],
+    "calculation": "WMS_goods_receipt_timestamp_minus_EDI_856_ship_timestamp"
+   },
+   "cost": {
+    "modeled_delivered_cost_usd_per_lb": 0.31,
+    "source_systems": [
+     "ERP_contract_pricing",
+     "TMS_freight_audit",
+     "EDI_810_supplier_invoice"
+    ],
+    "calculation": "material_invoice_value_plus_freight_invoice_value_divided_by_received_lb"
+   },
+   "mode": "truck_or_rail_to_truck",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_lb",
+      "modeled_value": 0.035,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "fuel_surcharge_cost_usd_per_lb",
+      "modeled_value": 0.0042,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "accessorial_cost_usd_per_lb",
+      "modeled_value": 0.0014,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_flour_fast_to_flour_inventory",
+   "from": "supplier_flour_regional_fast_response",
+   "to": "inventory_flour_receiving",
+   "relationship_type": "contingency_raw_material_supply",
+   "material": "wheat_flour",
+   "modeled_weekly_flow_lb": 440000,
+   "lead_time": {
+    "modeled_mean_days": 2,
+    "modeled_p90_days": 3,
+    "source_systems": [
+     "ERP_spot_purchase_order",
+     "supplier_portal_confirmation",
+     "TMS_load_tender",
+     "WMS_goods_receipt"
+    ],
+    "calculation": "WMS_goods_receipt_timestamp_minus_TMS_load_tender_acceptance_timestamp"
+   },
+   "cost": {
+    "modeled_delivered_cost_usd_per_lb": 0.38,
+    "source_systems": [
+     "ERP_spot_price_condition",
+     "TMS_freight_invoice"
+    ],
+    "calculation": "spot_material_price_plus_dedicated_truck_cost_per_lb"
+   },
+   "mode": "dedicated_truckload",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_lb",
+      "modeled_value": 0.035,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "fuel_surcharge_cost_usd_per_lb",
+      "modeled_value": 0.0042,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "accessorial_cost_usd_per_lb",
+      "modeled_value": 0.0014,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_peanut_contract_to_peanut_inventory",
+   "from": "supplier_peanuts_southeast_contract",
+   "to": "inventory_peanut_receiving",
+   "relationship_type": "inbound_raw_material_supply",
+   "material": "shelled_peanuts",
+   "modeled_weekly_flow_lb": 720000,
+   "lead_time": {
+    "modeled_mean_days": 8,
+    "modeled_p90_days": 12,
+    "source_systems": [
+     "ERP_purchase_order_release",
+     "EDI_856_advanced_shipping_notice",
+     "EDI_214_transportation_carrier_status",
+     "QMS_quality_release",
+     "WMS_goods_receipt"
+    ],
+    "calculation": "QMS_quality_release_timestamp_minus_ERP_purchase_order_release_timestamp"
+   },
+   "cost": {
+    "modeled_delivered_cost_usd_per_lb": 0.82,
+    "source_systems": [
+     "ERP_long_term_contract",
+     "commodity_procurement_workbench",
+     "TMS_freight_audit"
+    ],
+    "calculation": "contract_price_plus_allocated_freight_and_quality_handling_cost"
+   },
+   "mode": "truckload",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_lb",
+      "modeled_value": 0.055,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "fuel_surcharge_cost_usd_per_lb",
+      "modeled_value": 0.0066,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "accessorial_cost_usd_per_lb",
+      "modeled_value": 0.0022,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_peanut_fast_to_peanut_inventory",
+   "from": "supplier_peanuts_regional_fast_response",
+   "to": "inventory_peanut_receiving",
+   "relationship_type": "contingency_raw_material_supply",
+   "material": "shelled_peanuts",
+   "modeled_weekly_flow_lb": 250000,
+   "lead_time": {
+    "modeled_mean_days": 3,
+    "modeled_p90_days": 5,
+    "source_systems": [
+     "ERP_spot_purchase_order",
+     "supplier_available_to_promise",
+     "TMS_load_tender",
+     "QMS_quality_release",
+     "WMS_goods_receipt"
+    ],
+    "calculation": "QMS_quality_release_timestamp_minus_supplier_available_to_promise_confirmation_timestamp"
+   },
+   "cost": {
+    "modeled_delivered_cost_usd_per_lb": 0.96,
+    "source_systems": [
+     "ERP_spot_price_condition",
+     "TMS_expedited_freight_invoice"
+    ],
+    "calculation": "spot_material_price_plus_expedited_freight_cost_per_lb"
+   },
+   "mode": "expedited_truckload",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_lb",
+      "modeled_value": 0.055,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "fuel_surcharge_cost_usd_per_lb",
+      "modeled_value": 0.0066,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "accessorial_cost_usd_per_lb",
+      "modeled_value": 0.0022,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_fruit_bulk_to_fruit_inventory",
+   "from": "supplier_fruit_west_bulk",
+   "to": "inventory_fruit_base_receiving",
+   "relationship_type": "inbound_raw_material_supply",
+   "material": "fruit_base",
+   "modeled_weekly_flow_lb": 160000,
+   "lead_time": {
+    "modeled_mean_days": 9,
+    "modeled_p90_days": 14,
+    "source_systems": [
+     "ERP_purchase_order_release",
+     "EDI_856_advanced_shipping_notice",
+     "reefer_temperature_telemetry",
+     "WMS_goods_receipt",
+     "QMS_lot_release"
+    ],
+    "calculation": "QMS_lot_release_timestamp_minus_EDI_856_ship_timestamp"
+   },
+   "cost": {
+    "modeled_delivered_cost_usd_per_lb": 0.64,
+    "source_systems": [
+     "ERP_contract_pricing",
+     "TMS_refrigerated_freight_audit"
+    ],
+    "calculation": "fruit_base_invoice_plus_refrigerated_transport_cost_divided_by_released_lb"
+   },
+   "mode": "refrigerated_truckload",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_lb",
+      "modeled_value": 0.072,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "fuel_surcharge_cost_usd_per_lb",
+      "modeled_value": 0.0086,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "accessorial_cost_usd_per_lb",
+      "modeled_value": 0.0029,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_fruit_fast_to_fruit_inventory",
+   "from": "supplier_fruit_midwest_fast_response",
+   "to": "inventory_fruit_base_receiving",
+   "relationship_type": "contingency_raw_material_supply",
+   "material": "fruit_base",
+   "modeled_weekly_flow_lb": 90000,
+   "lead_time": {
+    "modeled_mean_days": 3,
+    "modeled_p90_days": 5,
+    "source_systems": [
+     "supplier_portal_available_to_promise",
+     "ERP_spot_purchase_order",
+     "TMS_load_tracking",
+     "WMS_goods_receipt"
+    ],
+    "calculation": "WMS_goods_receipt_timestamp_minus_supplier_ship_confirmation_timestamp"
+   },
+   "cost": {
+    "modeled_delivered_cost_usd_per_lb": 0.78,
+    "source_systems": [
+     "ERP_spot_price_condition",
+     "TMS_refrigerated_freight_invoice"
+    ],
+    "calculation": "spot_material_price_plus_short_cycle_refrigerated_freight_cost"
+   },
+   "mode": "refrigerated_truckload",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_lb",
+      "modeled_value": 0.072,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "fuel_surcharge_cost_usd_per_lb",
+      "modeled_value": 0.0086,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "accessorial_cost_usd_per_lb",
+      "modeled_value": 0.0029,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
    "id": "rel_sugar_to_sugar_oils_inventory",
    "from": "supplier_sugar_bulk_refiner",
    "to": "inventory_sugar_oils_receiving",
@@ -754,6 +2012,310 @@ export const BAU_GRAPH = {
      {
       "name": "expedite_freight_multiplier",
       "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_film_to_packaging_inventory",
+   "from": "supplier_film_wrap_converter",
+   "to": "inventory_packaging_receiving",
+   "relationship_type": "inbound_packaging_supply",
+   "material": "primary_film_wrappers",
+   "modeled_weekly_flow_units": 28850000,
+   "lead_time": {
+    "modeled_mean_days": 7,
+    "modeled_p90_days": 11,
+    "source_systems": [
+     "ERP_packaging_purchase_order",
+     "supplier_portal_ship_notice",
+     "EDI_856_advanced_shipping_notice",
+     "WMS_goods_receipt"
+    ],
+    "calculation": "WMS_goods_receipt_timestamp_minus_supplier_ship_notice_timestamp"
+   },
+   "cost": {
+    "modeled_cost_usd_per_1000_units": 6.5,
+    "source_systems": [
+     "ERP_packaging_contract",
+     "supplier_invoice"
+    ],
+    "calculation": "invoice_value_divided_by_received_wrapper_units_times_1000"
+   },
+   "mode": "dry_van_truckload",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_pallet",
+      "modeled_value": 72,
+      "unit": "USD_per_pallet"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.55,
+      "unit": "multiplier"
+     },
+     {
+      "name": "detention_accessorial_cost_usd_per_hour",
+      "modeled_value": 85,
+      "unit": "USD_per_hour"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_carton_to_packaging_inventory",
+   "from": "supplier_carton_corrugate_converter",
+   "to": "inventory_packaging_receiving",
+   "relationship_type": "inbound_packaging_supply",
+   "material": "cartons_and_master_cases",
+   "modeled_weekly_flow_cartons": 2885000,
+   "modeled_weekly_flow_cases": 480000,
+   "lead_time": {
+    "modeled_mean_days": 10,
+    "modeled_p90_days": 15,
+    "source_systems": [
+     "ERP_packaging_purchase_order",
+     "supplier_portal_ship_notice",
+     "EDI_856_advanced_shipping_notice",
+     "WMS_goods_receipt"
+    ],
+    "calculation": "WMS_goods_receipt_timestamp_minus_supplier_ship_notice_timestamp"
+   },
+   "cost": {
+    "modeled_cost_usd_per_1000_cartons": 210,
+    "source_systems": [
+     "ERP_packaging_contract",
+     "supplier_invoice"
+    ],
+    "calculation": "invoice_value_divided_by_received_carton_units_times_1000"
+   },
+   "mode": "dry_van_truckload",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_pallet",
+      "modeled_value": 72,
+      "unit": "USD_per_pallet"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.55,
+      "unit": "multiplier"
+     },
+     {
+      "name": "detention_accessorial_cost_usd_per_hour",
+      "modeled_value": 85,
+      "unit": "USD_per_hour"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_peanut_inventory_to_peanut_butter_processing",
+   "from": "inventory_peanut_receiving",
+   "to": "processing_peanut_butter_network",
+   "relationship_type": "raw_material_issue_to_secondary_processing",
+   "material": "shelled_peanuts",
+   "modeled_weekly_flow_lb": 970000,
+   "lead_time": {
+    "modeled_mean_days": 1,
+    "modeled_p90_days": 2,
+    "source_systems": [
+     "ERP_process_order_release",
+     "WMS_staging_confirmation",
+     "MES_batch_start"
+    ],
+    "calculation": "MES_batch_start_timestamp_minus_WMS_staging_confirmation_timestamp"
+   },
+   "cost": {
+    "modeled_internal_handling_cost_usd_per_lb": 0.012,
+    "source_systems": [
+     "ERP_cost_center_accounting",
+     "WMS_labor_activity"
+    ],
+    "calculation": "handling_labor_and_equipment_cost_allocated_to_peanut_lb"
+   },
+   "mode": "internal_plant_or_regional_truck_transfer",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_lb",
+      "modeled_value": 0.055,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "fuel_surcharge_cost_usd_per_lb",
+      "modeled_value": 0.0066,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "accessorial_cost_usd_per_lb",
+      "modeled_value": 0.0022,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_fruit_inventory_to_fruit_spread_processing",
+   "from": "inventory_fruit_base_receiving",
+   "to": "processing_fruit_spread_network",
+   "relationship_type": "raw_material_issue_to_secondary_processing",
+   "material": "fruit_base",
+   "modeled_weekly_flow_lb": 250000,
+   "lead_time": {
+    "modeled_mean_days": 1,
+    "modeled_p90_days": 2,
+    "source_systems": [
+     "ERP_process_order_release",
+     "WMS_staging_confirmation",
+     "MES_batch_start"
+    ],
+    "calculation": "MES_batch_start_timestamp_minus_WMS_staging_confirmation_timestamp"
+   },
+   "cost": {
+    "modeled_internal_handling_cost_usd_per_lb": 0.018,
+    "source_systems": [
+     "ERP_cost_center_accounting",
+     "WMS_cold_handling_activity"
+    ],
+    "calculation": "cold_handling_labor_and_equipment_cost_allocated_to_fruit_base_lb"
+   },
+   "mode": "internal_plant_or_refrigerated_regional_transfer",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_lb",
+      "modeled_value": 0.072,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "fuel_surcharge_cost_usd_per_lb",
+      "modeled_value": 0.0086,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "accessorial_cost_usd_per_lb",
+      "modeled_value": 0.0029,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.75,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_peanut_butter_to_sandwich_plants",
+   "from": "processing_peanut_butter_network",
+   "to": "plant_longmont_frozen_sandwich",
+   "relationship_type": "processed_ingredient_supply_to_manufacturing",
+   "material": "peanut_butter",
+   "modeled_weekly_flow_lb": 432000,
+   "lead_time": {
+    "modeled_mean_days": 3,
+    "modeled_p90_days": 5,
+    "source_systems": [
+     "ERP_stock_transfer_order",
+     "EDI_856_advanced_shipping_notice",
+     "TMS_load_tracking",
+     "WMS_goods_receipt"
+    ],
+    "calculation": "WMS_goods_receipt_timestamp_minus_EDI_856_ship_timestamp"
+   },
+   "cost": {
+    "modeled_transfer_cost_usd_per_lb": 0.05,
+    "source_systems": [
+     "TMS_lane_rate",
+     "ERP_internal_freight_settlement"
+    ],
+    "calculation": "lane_freight_cost_divided_by_peanut_butter_lb_transferred"
+   },
+   "mode": "food_grade_bulk_truck_or_tote_truckload",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "internal_transfer_cost_usd_per_lb",
+      "modeled_value": 0.01,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_multiplier",
+      "modeled_value": 1.25,
       "unit": "multiplier"
      }
     ]
@@ -1070,6 +2632,118 @@ export const BAU_GRAPH = {
       "name": "expedite_reefer_multiplier",
       "modeled_value": 2.15,
       "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_flour_inventory_to_longmont",
+   "from": "inventory_flour_receiving",
+   "to": "plant_longmont_frozen_sandwich",
+   "relationship_type": "ingredient_supply_to_manufacturing",
+   "material": "wheat_flour_or_bread_input",
+   "modeled_weekly_flow_lb": 418500,
+   "lead_time": {
+    "modeled_mean_days": 1,
+    "modeled_p90_days": 2,
+    "source_systems": [
+     "ERP_stock_transfer_order",
+     "WMS_component_staging",
+     "MES_line_consumption"
+    ],
+    "calculation": "MES_consumption_timestamp_minus_WMS_component_staging_timestamp"
+   },
+   "cost": {
+    "modeled_internal_transfer_cost_usd_per_lb": 0.015,
+    "source_systems": [
+     "ERP_cost_center_accounting",
+     "WMS_activity_costing"
+    ],
+    "calculation": "internal_material_handling_cost_divided_by_flour_lb_issued"
+   },
+   "mode": "internal_or_short_haul_truck",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "internal_transfer_cost_usd_per_lb",
+      "modeled_value": 0.01,
+      "unit": "USD_per_lb"
+     },
+     {
+      "name": "expedite_multiplier",
+      "modeled_value": 1.25,
+      "unit": "multiplier"
+     }
+    ]
+   }
+  },
+  {
+   "id": "rel_packaging_to_longmont",
+   "from": "inventory_packaging_receiving",
+   "to": "plant_longmont_frozen_sandwich",
+   "relationship_type": "packaging_supply_to_manufacturing",
+   "material": "wrappers_cartons_cases",
+   "modeled_weekly_flow_wrappers": 11500000,
+   "lead_time": {
+    "modeled_mean_days": 0.5,
+    "modeled_p90_days": 1,
+    "source_systems": [
+     "WMS_component_staging",
+     "MES_line_backflush"
+    ],
+    "calculation": "MES_packaging_consumption_timestamp_minus_WMS_stage_confirmation_timestamp"
+   },
+   "cost": {
+    "modeled_handling_cost_usd_per_1000_wrappers": 0.45,
+    "source_systems": [
+     "WMS_activity_costing",
+     "ERP_cost_center_accounting"
+    ],
+    "calculation": "packaging_handling_labor_cost_divided_by_wrappers_issued_times_1000"
+   },
+   "mode": "internal_material_staging",
+   "cost_components": {
+    "source_systems": [
+     "TMS_freight_audit_and_payment",
+     "ERP_invoice_matching",
+     "carrier_rate_card",
+     "3PL_contract_master"
+    ],
+    "source_events": [
+     "carrier_invoice",
+     "freight_audit_record",
+     "shipment_weight_or_case_count",
+     "accessorial_charge_record"
+    ],
+    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
+    "components": [
+     {
+      "name": "base_lane_freight_cost_usd_per_pallet",
+      "modeled_value": 72,
+      "unit": "USD_per_pallet"
+     },
+     {
+      "name": "expedite_freight_multiplier",
+      "modeled_value": 1.55,
+      "unit": "multiplier"
+     },
+     {
+      "name": "detention_accessorial_cost_usd_per_hour",
+      "modeled_value": 85,
+      "unit": "USD_per_hour"
      }
     ]
    }

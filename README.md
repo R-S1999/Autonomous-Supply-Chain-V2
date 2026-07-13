@@ -4,7 +4,7 @@ A focused browser simulation of a sugar-and-oils inbound delay propagating throu
 
 ## Network
 
-The active model contains only the relevant path: sugar and oils suppliers → Sugar & Oils inventory → fruit-spread processing → Longmont → Longmont finished goods → West Cold DC → Grocery/Mass retailer DC → grocery store.
+The active model retains the complete upstream ingredient network: flour, peanuts, peanut butter, fruit base, fruit spread, sugar and oils, plus packaging. Every required input converges on Longmont, the only sandwich-processing plant. Finished goods then flow through Longmont inventory → West Cold DC → Grocery/Mass retailer DC → grocery store.
 
 ## Experience
 
