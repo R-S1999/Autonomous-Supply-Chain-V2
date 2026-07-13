@@ -826,6 +826,17 @@ export const BAU_GRAPH = {
    "role": "sweetener_and_fat_receiving_inventory",
    "kpis": [
     {
+     "name": "oil_fat_days_of_cover",
+     "modeled_value": 3,
+     "unit": "days",
+     "source_system": "SAP_inventory_management_and_tank_telemetry",
+     "source_events": [
+      "tank_level_reading",
+      "goods_issue_to_production"
+     ],
+     "calculation": "usable_oil_and_fat_inventory_divided_by_daily_Longmont_requirement"
+    },
+    {
      "name": "sweetener_fat_composite_days_of_cover",
      "modeled_value": 10,
      "unit": "days",
@@ -1405,99 +1416,83 @@ export const BAU_GRAPH = {
    ]
   },
   {
-   "id": "retailer_dc_grocery_mass",
+   "id": "retailer_costco",
    "node_type": "retailer_distribution_center",
    "supply_chain_layer": "retailer_replenishment",
    "material_family": "frozen_sandwiches",
-   "role": "grocery_target_and_mass_retail_frozen_distribution_node",
+   "role": "costco_retail_replenishment",
    "kpis": [
     {
-     "name": "grocery_mass_weekly_receipts_cases",
-     "modeled_value": 210000,
+     "name": "costco_weekly_receipts_cases",
+     "modeled_value": 52000,
      "unit": "cases_per_week",
-     "source_system": "EDI_gateway_customer_order_management_and_retailer_portals",
-     "source_events": [
-      "EDI_850_purchase_order",
-      "EDI_856_advanced_shipping_notice",
-      "EDI_861_receiving_advice"
-     ],
-     "calculation": "sum_of_cases_received_by_grocery_and_mass_retailer_dcs_for_week"
+     "source_system": "Costco_retailer_portal"
     },
     {
-     "name": "grocery_mass_promotion_forward_buy_pct",
-     "modeled_value": 18,
+     "name": "costco_fill_rate_pct",
+     "modeled_value": 98.5,
      "unit": "percent",
-     "source_system": "trade_promotion_management_TPM_and_order_management_system",
-     "source_events": [
-      "promotion_calendar",
-      "customer_order_spike_flag"
-     ],
-     "calculation": "promotional_receipts_above_baseline_divided_by_total_weekly_receipts"
+     "source_system": "Costco_retailer_portal"
     },
     {
-     "name": "grocery_mass_dc_dwell_days",
-     "modeled_value": 4,
-     "unit": "days",
-     "source_system": "retailer_inventory_feed_and_EDI_852_product_activity_data",
-     "source_events": [
-      "retailer_dc_receipt",
-      "retailer_dc_ship_to_store"
-     ],
-     "calculation": "average_ship_to_store_date_minus_retailer_dc_receipt_date"
-    },
-    {
-     "name": "customer_OTIF_penalty_usd_per_late_case",
-     "modeled_value": 2.4,
-     "unit": "USD_per_late_case",
-     "source_system": "customer_contract_terms_plus_deduction_management_system",
-     "source_events": [
-      "customer_service_level_agreement",
-      "chargeback_notice",
-      "short_or_late_delivery_deduction"
-     ],
-     "calculation": "contractual_late_delivery_penalty_plus_deduction_admin_cost_per_late_case"
-    },
-    {
-     "name": "lost_service_margin_usd_per_unfulfilled_case",
-     "modeled_value": 4.4,
-     "unit": "USD_per_unfulfilled_case",
-     "source_system": "ERP_customer_order_margin_model_plus_claims_deduction_system",
-     "source_events": [
-      "customer_order_line",
-      "short_shipment_reason_code",
-      "gross_margin_by_case"
-     ],
-     "calculation": "expected_gross_margin_per_case_plus_estimated_future_service_risk_allowance"
+     "name": "costco_OTIF_penalty_usd_per_late_case",
+     "modeled_value": 3.1,
+     "unit": "USD_per_case",
+     "source_system": "SAP_customer_agreement"
     }
    ]
   },
   {
-   "id": "grocery_mass_store",
-   "node_type": "retail_store",
-   "supply_chain_layer": "store_replenishment",
+   "id": "retailer_sams_club",
+   "node_type": "retailer_distribution_center",
+   "supply_chain_layer": "retailer_replenishment",
    "material_family": "frozen_sandwiches",
-   "role": "grocery_and_mass_store_shelf",
+   "role": "sams_club_retail_replenishment",
    "kpis": [
     {
-     "name": "store_shelf_fill_rate_pct",
-     "modeled_value": 98.5,
-     "unit": "percent",
-     "source_system": "retailer_point_of_sale_and_inventory",
-     "source_events": [
-      "POS_sale",
-      "store_inventory_snapshot"
-     ],
-     "calculation": "cases_available_divided_by_cases_demanded"
+     "name": "sams_weekly_receipts_cases",
+     "modeled_value": 42000,
+     "unit": "cases_per_week",
+     "source_system": "Sams_Club_retailer_portal"
     },
     {
-     "name": "lost_margin_usd_per_unfulfilled_case",
-     "modeled_value": 5.1,
+     "name": "sams_fill_rate_pct",
+     "modeled_value": 98.5,
+     "unit": "percent",
+     "source_system": "Sams_Club_retailer_portal"
+    },
+    {
+     "name": "sams_OTIF_penalty_usd_per_late_case",
+     "modeled_value": 3.4,
      "unit": "USD_per_case",
-     "source_system": "retailer_finance_margin_model",
-     "source_events": [
-      "lost_sale_estimate"
-     ],
-     "calculation": "standard_margin_per_unfulfilled_case"
+     "source_system": "SAP_customer_agreement"
+    }
+   ]
+  },
+  {
+   "id": "retailer_other",
+   "node_type": "retailer_distribution_center",
+   "supply_chain_layer": "retailer_replenishment",
+   "material_family": "frozen_sandwiches",
+   "role": "other_retailer_replenishment",
+   "kpis": [
+    {
+     "name": "other_retailer_weekly_receipts_cases",
+     "modeled_value": 26000,
+     "unit": "cases_per_week",
+     "source_system": "retailer_order_management"
+    },
+    {
+     "name": "other_retailer_fill_rate_pct",
+     "modeled_value": 98.5,
+     "unit": "percent",
+     "source_system": "retailer_order_management"
+    },
+    {
+     "name": "other_retailer_OTIF_penalty_usd_per_late_case",
+     "modeled_value": 2.2,
+     "unit": "USD_per_case",
+     "source_system": "SAP_customer_agreement"
     }
    ]
   }
@@ -2571,72 +2566,6 @@ export const BAU_GRAPH = {
    }
   },
   {
-   "id": "rel_west_dc_to_grocery_mass",
-   "from": "cold_dc_west",
-   "to": "retailer_dc_grocery_mass",
-   "relationship_type": "customer_replenishment_shipment",
-   "material": "frozen_sandwich_cases",
-   "modeled_weekly_flow_cases": 120000,
-   "lead_time": {
-    "modeled_mean_days": 2,
-    "modeled_p90_days": 4,
-    "source_systems": [
-     "customer_order_management",
-     "EDI_850_purchase_order",
-     "EDI_856_advanced_shipping_notice",
-     "EDI_214_carrier_status",
-     "EDI_861_receiving_advice"
-    ],
-    "calculation": "retailer_EDI_861_receipt_timestamp_minus_EDI_856_ship_timestamp"
-   },
-   "cost": {
-    "modeled_freight_cost_usd_per_case": 0.44,
-    "source_systems": [
-     "TMS_customer_lane_rate",
-     "freight_audit_invoice"
-    ],
-    "calculation": "carrier_invoice_value_divided_by_customer_cases_delivered"
-   },
-   "mode": "refrigerated_truckload_or_less_than_truckload",
-   "cost_components": {
-    "source_systems": [
-     "TMS_freight_audit_and_payment",
-     "ERP_invoice_matching",
-     "carrier_rate_card",
-     "3PL_contract_master"
-    ],
-    "source_events": [
-     "carrier_invoice",
-     "freight_audit_record",
-     "shipment_weight_or_case_count",
-     "accessorial_charge_record"
-    ],
-    "calculation": "linehaul_plus_fuel_surcharge_plus_accessorials_divided_by_shipped_unit_quantity",
-    "components": [
-     {
-      "name": "reefer_linehaul_cost_usd_per_case",
-      "modeled_value": 0.42,
-      "unit": "USD_per_case"
-     },
-     {
-      "name": "fuel_surcharge_cost_usd_per_case",
-      "modeled_value": 0.06,
-      "unit": "USD_per_case"
-     },
-     {
-      "name": "cold_chain_accessorial_cost_usd_per_case",
-      "modeled_value": 0.025,
-      "unit": "USD_per_case"
-     },
-     {
-      "name": "expedite_reefer_multiplier",
-      "modeled_value": 2.15,
-      "unit": "multiplier"
-     }
-    ]
-   }
-  },
-  {
    "id": "rel_flour_inventory_to_longmont",
    "from": "inventory_flour_receiving",
    "to": "plant_longmont_frozen_sandwich",
@@ -2749,24 +2678,68 @@ export const BAU_GRAPH = {
    }
   },
   {
-   "id": "rel_grocery_mass_dc_to_store",
-   "from": "retailer_dc_grocery_mass",
-   "to": "grocery_mass_store",
-   "relationship_type": "store_replenishment_shipment",
+   "id": "rel_west_dc_to_costco",
+   "from": "cold_dc_west",
+   "to": "retailer_costco",
+   "relationship_type": "customer_replenishment_shipment",
    "material": "frozen_sandwich_cases",
-   "modeled_weekly_flow_cases": 120000,
+   "modeled_weekly_flow_cases": 52000,
    "lead_time": {
-    "modeled_mean_days": 1,
-    "modeled_p90_days": 2,
+    "modeled_mean_days": 2,
+    "modeled_p90_days": 3,
     "source_systems": [
-     "retailer_replenishment",
-     "TMS_store_delivery"
+     "TMS",
+     "Costco_retailer_portal"
     ]
    },
    "cost": {
-    "modeled_freight_cost_usd_per_case": 0.18,
+    "modeled_freight_cost_usd_per_case": 0.44,
     "source_systems": [
-     "retailer_transport_management"
+     "TMS_freight_audit"
+    ]
+   }
+  },
+  {
+   "id": "rel_west_dc_to_sams_club",
+   "from": "cold_dc_west",
+   "to": "retailer_sams_club",
+   "relationship_type": "customer_replenishment_shipment",
+   "material": "frozen_sandwich_cases",
+   "modeled_weekly_flow_cases": 42000,
+   "lead_time": {
+    "modeled_mean_days": 2,
+    "modeled_p90_days": 3,
+    "source_systems": [
+     "TMS",
+     "Sams_Club_retailer_portal"
+    ]
+   },
+   "cost": {
+    "modeled_freight_cost_usd_per_case": 0.46,
+    "source_systems": [
+     "TMS_freight_audit"
+    ]
+   }
+  },
+  {
+   "id": "rel_west_dc_to_other_retailers",
+   "from": "cold_dc_west",
+   "to": "retailer_other",
+   "relationship_type": "customer_replenishment_shipment",
+   "material": "frozen_sandwich_cases",
+   "modeled_weekly_flow_cases": 26000,
+   "lead_time": {
+    "modeled_mean_days": 2,
+    "modeled_p90_days": 4,
+    "source_systems": [
+     "TMS",
+     "retailer_order_management"
+    ]
+   },
+   "cost": {
+    "modeled_freight_cost_usd_per_case": 0.52,
+    "source_systems": [
+     "TMS_freight_audit"
     ]
    }
   }
@@ -2787,16 +2760,16 @@ export const ALERT_OVERLAY = {
  },
  "events": [
   {
-   "id": "TAC_001_sugar_oils_inbound_delay",
+   "id": "TAC_001_oils_fats_inbound_delay",
    "event_horizon": "tactical",
    "event_type": "raw_material_inbound_delay",
    "status": "active",
    "trigger_window": {
     "expected_start_in_days": 3,
-    "expected_duration_days": 8,
+    "expected_duration_days": 5,
     "planning_bucket": "daily"
    },
-   "business_question": "How should Longmont protect store availability when sugar and oils inbound shipments are delayed?",
+   "business_question": "How should Longmont protect retailer fulfillment when the inbound oils and fats tanker is five days late?",
    "signal_sources": [
     {
      "system": "SAP_material_management",
@@ -2807,49 +2780,40 @@ export const ALERT_OVERLAY = {
     {
      "system": "TMS_carrier_tracking",
      "events": [
-      "late_tanker",
-      "late_bulk_sugar_load"
+      "late_tanker"
      ]
     }
    ],
    "affected_model_objects": {
     "nodes": [
-     "supplier_sugar_bulk_refiner",
      "supplier_oils_fats_regional",
      "inventory_sugar_oils_receiving",
      "processing_fruit_spread_network",
      "plant_longmont_frozen_sandwich",
      "frozen_inventory_longmont",
      "cold_dc_west",
-     "retailer_dc_grocery_mass",
-     "grocery_mass_store"
+     "retailer_costco",
+     "retailer_sams_club",
+     "retailer_other"
     ],
     "relationships": [
-     "rel_sugar_to_sugar_oils_inventory",
      "rel_oils_to_sugar_oils_inventory",
      "rel_sugar_oils_to_secondary_processing",
      "rel_fruit_spread_to_sandwich_plants",
      "rel_longmont_to_fg_inventory",
      "rel_longmont_fg_to_west_dc",
-     "rel_west_dc_to_grocery_mass",
-     "rel_grocery_mass_dc_to_store"
+     "rel_west_dc_to_costco",
+     "rel_west_dc_to_sams_club",
+     "rel_west_dc_to_other_retailers"
     ]
    },
    "overlay_patches": [
     {
      "target_type": "node",
      "target_id": "inventory_sugar_oils_receiving",
-     "metric": "sweetener_fat_composite_days_of_cover",
-     "baseline_value": 10,
-     "scenario_value": 3,
-     "operation": "replace"
-    },
-    {
-     "target_type": "relationship",
-     "target_id": "rel_sugar_to_sugar_oils_inventory",
-     "path": "lead_time.modeled_mean_days",
-     "baseline_value": 4,
-     "scenario_value": 9,
+     "metric": "oil_fat_days_of_cover",
+     "baseline_value": 3,
+     "scenario_value": 0,
      "operation": "replace"
     },
     {
@@ -2863,39 +2827,42 @@ export const ALERT_OVERLAY = {
    ],
    "scenario_assumptions": {
     "horizon_days": 30,
-    "initial_composite_cover_days": 3,
-    "supplier_delay_days": 5,
-    "weekly_store_demand_cases": 120000,
-    "retailer_OTIF_penalty_usd_per_late_case": 2.4,
-    "lost_margin_usd_per_unfulfilled_case": 5.1
+    "initial_oil_cover_days": 3,
+    "delayed_tanker_days": 5,
+    "weekly_oil_requirement_lb": 145000,
+    "retailer_demand_cases": {
+     "costco": 52000,
+     "sams_club": 42000,
+     "other": 26000
+    }
    },
    "estimated_no_action_impact": {
     "service_risk": "high"
    },
    "candidate_interventions": [
     {
-     "id": "expedite_sugar_oils_shipments",
+     "id": "expedite_delayed_oil_tanker",
      "action_type": "transport_expedite",
      "incremental_cost_usd": 85000,
-     "expected_effect": "Recover inbound sugar and oil deliveries within two days and protect store replenishment.",
+     "expected_effect": "Recover the delayed tanker three days earlier",
      "risk": "carrier_capacity"
     },
     {
-     "id": "source_emergency_regional_supply",
+     "id": "source_emergency_oil_supply",
      "action_type": "alternate_source_fulfillment",
      "incremental_cost_usd": 135000,
-     "expected_effect": "Cover most of the delayed volume through qualified regional sugar and oil suppliers.",
+     "expected_effect": "Deliver five days of qualified emergency oil supply before inventory runs out",
      "risk": "spot_price_and_quality_release"
     },
     {
-     "id": "prioritize_longmont_and_adjust_schedule",
+     "id": "prioritize_longmont_oil_allocation",
      "action_type": "allocation_priority",
      "incremental_cost_usd": 45000,
-     "expected_effect": "Reserve available ingredients for Longmont and sequence priority SKUs until inbound supply recovers.",
-     "risk": "deferred_low_priority_orders"
+     "expected_effect": "Prioritize lower-oil priority SKUs and protect Costco and Sam's Club orders",
+     "risk": "deferred_other_retailer_orders"
     }
    ],
-   "recommended_intervention_id": "source_emergency_regional_supply"
+   "recommended_intervention_id": "source_emergency_oil_supply"
   }
  ]
 };

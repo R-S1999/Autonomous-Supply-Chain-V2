@@ -12,7 +12,6 @@ export const COLUMNS = [
   { key: 'fg_inventory', title: 'FG INVENTORY',  layers: ['finished_goods_inventory'] },
   { key: 'cold_dc',      title: 'COLD CHAIN DC', layers: ['distribution'] },
   { key: 'retailer_dc',  title: 'RETAILER DC',   layers: ['retailer_replenishment', 'foodservice_replenishment'] },
-  { key: 'store',        title: 'STORE',         layers: ['store_replenishment'] },
 ];
 
 /* Display names + primary KPI (drives the node sub-label, node health
@@ -32,7 +31,7 @@ export const NODE_META = {
   inventory_flour_receiving:     { name: 'Flour RM',       primaryKpi: 'flour_days_of_cover', order: 0 },
   inventory_peanut_receiving:    { name: 'Peanut RM',      primaryKpi: 'peanut_days_of_cover', order: 1 },
   inventory_fruit_base_receiving:{ name: 'Fruit Base RM',  primaryKpi: 'fruit_base_days_of_cover', order: 2 },
-  inventory_sugar_oils_receiving:{ name: 'Sugar & Oils RM',primaryKpi: 'sweetener_fat_composite_days_of_cover', order: 3 },
+  inventory_sugar_oils_receiving:{ name: 'Oils & Fats RM',primaryKpi: 'oil_fat_days_of_cover', order: 3 },
   inventory_packaging_receiving: { name: 'Packaging RM',   primaryKpi: 'wrapper_days_of_cover', order: 4 },
 
   processing_peanut_butter_network: { name: 'Peanut Butter', primaryKpi: 'peanut_butter_output_lb_per_week', order: 0 },
@@ -53,7 +52,9 @@ export const NODE_META = {
   retailer_dc_grocery_mass: { name: 'Grocery & Mass', primaryKpi: 'grocery_mass_weekly_receipts_cases', order: 0 },
   retailer_dc_foodservice:  { name: 'Foodservice',    primaryKpi: 'foodservice_weekly_receipts_cases', order: 1 },
   retailer_dc_walmart_sams: { name: "Walmart / Sam's",primaryKpi: 'walmart_sams_weekly_receipts_cases', order: 2 },
-  grocery_mass_store: { name: 'Grocery Store', primaryKpi: 'store_shelf_fill_rate_pct', order: 0 },
+  retailer_costco: { name: 'Costco', primaryKpi: 'costco_fill_rate_pct', order: 0 },
+  retailer_sams_club: { name: "Sam's Club", primaryKpi: 'sams_fill_rate_pct', order: 1 },
+  retailer_other: { name: 'Other Retailers', primaryKpi: 'other_retailer_fill_rate_pct', order: 2 },
 };
 
 /* origins = the node(s) the alert signal ORIGINATES from (not impact — impact
@@ -62,11 +63,11 @@ export const NODE_META = {
 /* alerts are named after the sensing agent that raised them:
    "{Alert Source} Agent", from the alert's primary signal system */
 export const ALERT_META = {
-  TAC_001_sugar_oils_inbound_delay: {
+  TAC_001_oils_fats_inbound_delay: {
     code: 'INBOUND DELAY AGENT',
-    title: 'Sugar & oils inbound delay',
-    origins: ['supplier_sugar_bulk_refiner', 'supplier_oils_fats_regional'],
-    sensed: 'SAP purchase-order exceptions and carrier tracking show both the bulk sugar load and oil tanker arriving five days late. Composite ingredient cover is projected to fall to three days, constraining fruit-spread output and Longmont store replenishment.',
+    title: 'Oils & fats inbound delay',
+    origins: ['supplier_oils_fats_regional'],
+    sensed: 'SAP purchase-order exceptions and carrier tracking show the inbound oils and fats tanker arriving five days late. Longmont begins with three days of oil cover, so the delay can constrain production and retailer fulfillment.',
   },
 };
 
@@ -333,9 +334,9 @@ export const DAYS_PER_MONTH = 30.4;
 
 /* what each intervention concretely does (engine-true) + the nodes it acts on */
 export const INTERVENTION_NODES = {
-  expedite_sugar_oils_shipments: ['supplier_sugar_bulk_refiner', 'supplier_oils_fats_regional', 'inventory_sugar_oils_receiving'],
-  source_emergency_regional_supply: ['supplier_sugar_bulk_refiner', 'supplier_oils_fats_regional', 'inventory_sugar_oils_receiving', 'processing_fruit_spread_network'],
-  prioritize_longmont_and_adjust_schedule: ['inventory_sugar_oils_receiving', 'processing_fruit_spread_network', 'plant_longmont_frozen_sandwich'],
+  expedite_delayed_oil_tanker: ['supplier_oils_fats_regional', 'inventory_sugar_oils_receiving'],
+  source_emergency_oil_supply: ['supplier_oils_fats_regional', 'inventory_sugar_oils_receiving', 'processing_fruit_spread_network'],
+  prioritize_longmont_oil_allocation: ['inventory_sugar_oils_receiving', 'processing_fruit_spread_network', 'plant_longmont_frozen_sandwich'],
   expedite_current_reefer: ['cold_dc_central', 'retailer_dc_walmart_sams'],
   ship_replacement_from_southeast_dc: ['cold_dc_southeast', 'retailer_dc_walmart_sams'],
   split_replacement_central_and_southeast_dc: ['cold_dc_central', 'cold_dc_southeast', 'retailer_dc_walmart_sams'],
@@ -357,9 +358,9 @@ export const INTERVENTION_NODES = {
 };
 
 export const INTERVENTION_PROPOSALS = {
-  expedite_sugar_oils_shipments: 'Expedite the delayed bulk sugar load and oil tanker to recover inbound supply within two days.',
-  source_emergency_regional_supply: 'Release qualified regional supply to cover most of the delayed sugar and oil volume.',
-  prioritize_longmont_and_adjust_schedule: 'Reserve available ingredients for Longmont and sequence priority store SKUs until inbound supply recovers.',
+  expedite_delayed_oil_tanker: 'Upgrade the delayed oil tanker to team-driver service and recover the load three days earlier.',
+  source_emergency_oil_supply: 'Release five days of qualified regional oil supply before the Longmont tank reaches minimum.',
+  prioritize_longmont_oil_allocation: "Prioritize lower-oil Longmont SKUs and protect Costco and Sam's Club orders until the tanker arrives.",
   expedite_current_reefer: 'Upgrade the delayed Central→Walmart reefer to a team-driver expedite: recover ~1.5 days of transit at 2.2× lane freight on the affected load.',
   ship_replacement_from_southeast_dc: "Cut replacement orders at SE Cold DC covering ~90% of Walmart's shortfall, shipped on the 1.5-day lane at 1.8× freight while the late load continues inbound.",
   split_replacement_central_and_southeast_dc: "Split replacement shipments across Central + SE Cold DC to cover ~96% of Walmart's at-risk cases before the requested delivery date, at ~1.9× freight.",

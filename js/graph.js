@@ -4,12 +4,12 @@
 import { BAU_GRAPH } from './data.generated.js';
 import {
   COLUMNS, NODE_META, ALERT_META, nodesById, eventsById, columnOf,
-  nodeSubLabel, nodeSource, pretty, fmtKpiValue, expectedShifts, kNum,
+  nodeSubLabel, nodeSource, pretty, fmtKpiValue, expectedShifts, kNum, primaryKpiOf,
 } from './model.js';
 
-const VB_W = 1740, VB_H = 880;
-const COL_X = [85, 290, 495, 700, 905, 1110, 1330, 1560];
-const COL_R = [18, 20, 22, 26, 20, 22, 23, 25];
+const VB_W = 1510, VB_H = 880;
+const COL_X = [85, 290, 495, 700, 905, 1110, 1330];
+const COL_R = [18, 20, 22, 26, 20, 22, 23];
 const BOUNDARY_X = 1218;
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -294,6 +294,16 @@ export function renderGraph(container, opts = {}) {
         const h = frame?.nodeHealth?.[id] || 'good';
         g.classList.remove('h-good', 'h-amber', 'h-red');
         g.classList.add(`h-${h}`);
+        const node = nodesById[id];
+        const primary = primaryKpiOf(node);
+        const live = primary ? frame?.valueOverrides?.[id]?.[primary.name] : undefined;
+        const sub = g.querySelector('.node-sub');
+        if (sub) {
+          if (live == null) sub.textContent = nodeSubLabel(node);
+          else if (primary.unit === 'days') sub.textContent = `${live}d cover`;
+          else if (primary.unit === 'percent') sub.textContent = `${live}% fill`;
+          else sub.textContent = fmtKpiValue({ ...primary, modeled_value: live });
+        }
       }
       for (const [id, ps] of Object.entries(particleSets)) {
         const st = frame?.edgeStates?.[id] || 'flow';
