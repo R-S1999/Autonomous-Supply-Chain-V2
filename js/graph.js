@@ -325,7 +325,7 @@ export function renderGraph(container, opts = {}) {
         g.classList.toggle('has-alert', evs.length > 0);
         const tag = g.querySelector('.alert-tag');
         if (evs.length) {
-          const label = evs.length > 1 ? `${evs.length} ALERTS` : (ALERT_META[evs[0]]?.code || '⚠');
+          const label = evs.length > 1 ? `! ${evs.length} ALERTS` : `! ${ALERT_META[evs[0]]?.code || 'ALERT'}`;
           const txt = tag.querySelector('text');
           txt.textContent = label;
           const w = label.length * 6.6 + 18;

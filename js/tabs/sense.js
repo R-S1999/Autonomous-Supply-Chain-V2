@@ -40,8 +40,8 @@ export function renderSense(view, ctx) {
 
   const hint = document.createElement('div');
   hint.className = 'sense-hint';
-  hint.innerHTML = `<span class="alert-dot"></span> AMBER TAGS = ALERTS ORIGINATING AT THAT NODE ·
-    CLICK A NODE FOR DISRUPTION DETAIL · HOVER FOR LIVE KPIS`;
+  hint.innerHTML = `<span class="alert-dot"></span> AMBER TAG = ALERT ORIGIN ·
+    CLICK FOR DISRUPTION DETAIL · HOVER FOR LIVE KPIS`;
   canvas.appendChild(hint);
 
   if (ctx.state.debugPopNode) setTimeout(() => graph.showPopover(ctx.state.debugPopNode), 600);
