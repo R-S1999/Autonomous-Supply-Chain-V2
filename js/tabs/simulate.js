@@ -1,153 +1,50 @@
-// SIMULATE — plays the DES for ONE disruption on its comparison horizon
-// (tactical → 1 month, long-term → 6 months, same horizons as the BAU cards)
-// so "cost of doing nothing" is a clean simulated delta vs BAU.
 import { renderGraph } from '../graph.js';
 import { TimelinePlayer } from '../sim.js';
-import { EVENTS, ALERT_META, money, pretty, nodesById, kpiOf } from '../model.js';
+import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, money, pretty } from '../model.js';
 import { runBau, runScenario } from '../engine.js';
-import { bauCards, fillCostCard, attachBreakdown } from '../costcards.js';
-
-/* worst value of every simulated node metric inside the disruption window,
-   paired with its BAU-normal value and the % difference */
-function buildCompare(run, bau) {
-  /* BAU normal = the settled BAU value on the same horizon (past warm-up) */
-  const bauRef = bau.frames[Math.min(run.horizon, bau.frames.length) - 1].valueOverrides;
-  const cmp = {};
-  for (const f of run.frames) {
-    if (f.phase === 'pre') continue;
-    for (const [nid, mets] of Object.entries(f.valueOverrides)) {
-      for (const [mk, v] of Object.entries(mets)) {
-        const cur = (cmp[nid] ||= {})[mk];
-        if (!cur || v < cur.worst) cmp[nid][mk] = { worst: v };
-      }
-    }
-  }
-  for (const [nid, mets] of Object.entries(cmp)) {
-    for (const [mk, c] of Object.entries(mets)) {
-      const bauV = bauRef?.[nid]?.[mk] ?? kpiOf(nodesById[nid], mk)?.modeled_value;
-      if (!(bauV > 0)) { delete mets[mk]; continue; }
-      c.bau = Math.round(bauV * 10) / 10;
-      c.worst = Math.round(c.worst * 10) / 10;
-      c.pct = Math.round(((c.worst - bauV) / bauV) * 100);
-      if (c.pct > -1) delete mets[mk]; // only genuine worsenings
-    }
-    if (!Object.keys(mets).length) delete cmp[nid];
-  }
-  return cmp;
-}
 
 export function renderSimulate(view, ctx) {
-  view.innerHTML = `
-    <div class="sim-layout">
-      <aside class="sim-rail sim-rail-left">
-        <div class="rail-title">DISRUPTIONS · PICK ONE TO MODEL</div>
-        ${EVENTS.map(e => {
-          const m = ALERT_META[e.id];
-          const isTac = e.event_horizon === 'tactical';
-          return `<button class="rail-chip" data-id="${e.id}">
-            <b class="${isTac ? 'tac' : 'lt'}">${m.code}</b>
-            <span>${m.title}</span>
-            <i>${isTac ? 'ACTIVE · 1-MO RUN' : 'WATCH · 6-MO RUN'}</i>
-          </button>`;
-        }).join('')}
-      </aside>
-      <div class="sim-canvas" id="sim-canvas"></div>
-      <aside class="sim-rail sim-rail-right">
-        <div class="cost-card rail-card" id="rc-1mo"></div>
-        <div class="cost-card rail-card" id="rc-6mo"></div>
-        <div class="impact-card in-rail" id="rc-impact"></div>
-      </aside>
-    </div>`;
-
-  const { oneMo, sixMo } = bauCards();
-  const c1 = view.querySelector('#rc-1mo');
-  const c6 = view.querySelector('#rc-6mo');
-  fillCostCard(c1, '1-MO BAU', oneMo);
-  fillCostCard(c6, '6-MO BAU', sixMo);
-  const detach1 = attachBreakdown(c1, '1-MONTH BAU', oneMo);
-  const detach6 = attachBreakdown(c6, '6-MONTH BAU', sixMo);
-
-  const canvas = view.querySelector('#sim-canvas');
-  const rail = view.querySelector('.sim-rail-left');
-  const impact = view.querySelector('#rc-impact');
-  const graph = renderGraph(canvas, { onSimulate: (eventId) => loadEvent(eventId) });
-
-  const clock = document.createElement('div');
-  clock.className = 'sim-clock';
-  canvas.appendChild(clock);
-
+  const event = EVENTS[0];
+  const meta = ALERT_META[event.id];
+  ctx.state.selectedEventId = event.id;
+  view.innerHTML = `<div class="focus-sim">
+    <div class="focus-alert"><span class="alert-dot"></span><div><b>${meta.code}</b><h2>${meta.title}</h2><p>${meta.sensed}</p></div></div>
+    <div class="focus-graph" id="sim-canvas"></div>
+    <div class="sim-clock focus-clock"><span class="mode">30-DAY DISCRETE-EVENT RUN</span><span class="day" id="sc-day">DAY 1 / 30</span><span class="phase pre" id="sc-phase">PRE-EVENT</span><button id="sc-restart">REPLAY</button></div>
+    <section class="result-panel" id="results">
+      <div class="impact-total"><div class="lbl">COST OF DOING NOTHING</div><div class="num" id="impact">—</div><p>Incremental cost versus the same 30-day BAU horizon, including retailer OTIF penalties and store-level lost margin.</p></div>
+      <div class="solutions hidden" id="solutions"><div class="section-kicker">SIMULATED SOLUTIONS</div><h2>Three ways to protect store availability</h2><div class="solution-grid">
+        ${(event.candidate_interventions || []).map((iv, i) => `<article class="solution-card"><span>0${i + 1}</span><h3>${pretty(iv.id)}</h3><p>${INTERVENTION_PROPOSALS[iv.id]}</p></article>`).join('')}
+      </div><button class="btn-primary" id="to-decide">COMPARE ROI IN DECIDE ▸</button></div>
+    </section>
+  </div>`;
+  const graph = renderGraph(view.querySelector('#sim-canvas'));
+  graph.setAlerts(Object.fromEntries(meta.origins.map(id => [id, [event.id]])));
+  graph.highlightAlert(event, meta.origins);
   const bau = runBau();
-  let player = null;
-
-  function loadEvent(eventId) {
-    const event = EVENTS.find(e => e.id === eventId) || EVENTS[0];
-    ctx.state.selectedEventId = event.id;
-    const m = ALERT_META[event.id];
-    for (const c of rail.querySelectorAll('.rail-chip')) c.classList.toggle('selected', c.dataset.id === event.id);
-    graph.setAlerts(Object.fromEntries(m.origins.map(o => [o, [event.id]])));
-
-    if (player) player.destroy();
-    const run = runScenario(event.id);
-    const frames = run.frames;
-    const H = run.horizon;
-    graph.setCompare(buildCompare(run, bau)); // popovers: worst-in-window vs BAU
-    const finalInc = run.total - bau.frames[H - 1].cumTotal;
-    /* final bucket deltas vs BAU on the same horizon */
-    const deltas = Object.entries(run.cum)
-      .map(([k, v]) => ({ k, d: v - bau.frames[H - 1].cum[k] }))
-      .filter(x => Math.abs(x.d) > 500)
-      .sort((a, b) => Math.abs(b.d) - Math.abs(a.d))
-      .slice(0, 6);
-
-    clock.innerHTML = `
-      <span class="mode">DES · ${m.code} · ${H === 30 ? '1-MO' : '6-MO'} HORIZON</span>
-      <span class="day" id="sc-day">—</span>
-      <span class="phase pre" id="sc-phase">PRE-EVENT</span>
-      <button id="sc-restart" title="Replay">⟲</button>`;
-    const dayEl = clock.querySelector('#sc-day');
-    const phaseEl = clock.querySelector('#sc-phase');
-
-    impact.innerHTML = `
-      <div class="impact-head">
-        <span class="t">COST OF DOING NOTHING</span>
-        <span class="risk">${pretty(event.estimated_no_action_impact?.service_risk || '')} RISK</span>
-      </div>
-      <div class="impact-total">
-        <div class="num" id="imp-num">$0</div>
-        <div class="lbl">SIMULATED INCREMENTAL VS BAU · SAME ${H === 30 ? '1-MONTH' : '6-MONTH'} HORIZON</div>
-      </div>
-      <div class="impact-lines">
-        ${deltas.map(x => `<div class="impact-line"><span class="k">${pretty(x.k)}</span><span class="v">${money(x.d, { plus: true })}</span></div>`).join('')}
-        <div class="impact-line" style="border-top:1px solid var(--line);margin-top:4px;padding-top:6px">
-          <span class="k" style="font-weight:700">projected total</span>
-          <span class="v" style="color:var(--red)">${money(finalInc, { plus: true })}</span></div>
-      </div>
-      <div class="impact-cta">
-        <button class="btn-primary" id="imp-iv">RANK INTERVENTIONS ▸</button>
-        <button class="btn-ghost" id="imp-act">AUTOMATE ▸</button>
-      </div>`;
-    const numEl = impact.querySelector('#imp-num');
-    impact.querySelector('#imp-iv').addEventListener('click', () => ctx.gotoTab('intervene', { eventId: event.id }));
-    impact.querySelector('#imp-act').addEventListener('click', () => ctx.gotoTab('act', { eventId: event.id }));
-
-    player = new TimelinePlayer(frames, (f, i) => {
-      graph.setFrame(f);
-      dayEl.textContent = `${f.label} / ${H}`;
-      phaseEl.textContent = f.phase === 'pre' ? 'PRE-EVENT' : f.phase === 'active' ? 'DISRUPTION ACTIVE' : 'AFTERMATH';
-      phaseEl.className = `phase ${f.phase}`;
-      numEl.textContent = money(Math.max(0, f.cumTotal - bau.frames[Math.min(i, bau.frames.length - 1)].cumTotal));
-    }, { msPerTick: H === 30 ? 260 : 65 });
-    clock.querySelector('#sc-restart').addEventListener('click', () => player.restart());
+  const run = runScenario(event.id);
+  const impact = run.total - bau.frames[29].cumTotal;
+  const day = view.querySelector('#sc-day');
+  const phase = view.querySelector('#sc-phase');
+  const solutions = view.querySelector('#solutions');
+  let player;
+  const play = () => {
+    solutions.classList.add('hidden');
+    view.querySelector('#impact').textContent = 'Computing…';
+    player = new TimelinePlayer(run.frames, (f, i) => {
+      graph.setFrame(f); day.textContent = `${f.label} / 30`;
+      phase.textContent = f.phase === 'pre' ? 'PRE-EVENT' : f.phase === 'active' ? 'DISRUPTION PROPAGATING' : 'RECOVERY';
+      phase.className = `phase ${f.phase}`;
+      if (i === run.frames.length - 1) {
+        view.querySelector('#impact').textContent = money(impact, { plus: true });
+        solutions.classList.remove('hidden');
+        solutions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, { msPerTick: 150 });
     player.play();
-  }
-
-  rail.addEventListener('click', (e) => {
-    const chip = e.target.closest('.rail-chip');
-    if (chip) loadEvent(chip.dataset.id);
-  });
-
-  loadEvent(ctx.state.selectedEventId || 'TAC_001_late_reefer_to_walmart_sams_dc');
-  if (ctx.state.debugPopNode) setTimeout(() => graph.showPopover(ctx.state.debugPopNode), 800);
-
-  return () => { if (player) player.destroy(); detach1(); detach6(); graph.destroy(); };
+  };
+  view.querySelector('#sc-restart').addEventListener('click', () => { player.destroy(); play(); });
+  view.querySelector('#to-decide').addEventListener('click', () => ctx.gotoTab('intervene', { eventId: event.id }));
+  play();
+  return () => { player?.destroy(); graph.destroy(); };
 }

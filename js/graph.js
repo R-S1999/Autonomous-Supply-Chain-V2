@@ -7,10 +7,10 @@ import {
   nodeSubLabel, nodeSource, pretty, fmtKpiValue, expectedShifts, kNum,
 } from './model.js';
 
-const VB_W = 1560, VB_H = 880;
-const COL_X = [95, 318, 516, 720, 922, 1112, 1350];
-const COL_R = [15, 19, 22, 26, 19, 22, 23];
-const BOUNDARY_X = 1237;
+const VB_W = 1740, VB_H = 880;
+const COL_X = [85, 290, 495, 700, 905, 1110, 1330, 1560];
+const COL_R = [18, 20, 22, 26, 20, 22, 23, 25];
+const BOUNDARY_X = 1218;
 const NS = 'http://www.w3.org/2000/svg';
 
 function svgEl(tag, attrs = {}) {

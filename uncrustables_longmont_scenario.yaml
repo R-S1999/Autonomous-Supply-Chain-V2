@@ -1,0 +1,125 @@
+model_name: longmont_sugar_oils_delay
+network:
+  keep_nodes:
+    - supplier_sugar_bulk_refiner
+    - supplier_oils_fats_regional
+    - inventory_sugar_oils_receiving
+    - processing_fruit_spread_network
+    - plant_longmont_frozen_sandwich
+    - frozen_inventory_longmont
+    - cold_dc_west
+    - retailer_dc_grocery_mass
+  store:
+    id: grocery_mass_store
+    node_type: retail_store
+    supply_chain_layer: store_replenishment
+    material_family: frozen_sandwiches
+    role: grocery_and_mass_store_shelf
+    kpis:
+      - name: store_shelf_fill_rate_pct
+        modeled_value: 98.5
+        unit: percent
+        source_system: retailer_point_of_sale_and_inventory
+        source_events: [POS_sale, store_inventory_snapshot]
+        calculation: cases_available_divided_by_cases_demanded
+      - name: lost_margin_usd_per_unfulfilled_case
+        modeled_value: 5.1
+        unit: USD_per_case
+        source_system: retailer_finance_margin_model
+        source_events: [lost_sale_estimate]
+        calculation: standard_margin_per_unfulfilled_case
+  store_relationship:
+    id: rel_grocery_mass_dc_to_store
+    from: retailer_dc_grocery_mass
+    to: grocery_mass_store
+    relationship_type: store_replenishment_shipment
+    material: frozen_sandwich_cases
+    modeled_weekly_flow_cases: 120000
+    lead_time:
+      modeled_mean_days: 1
+      modeled_p90_days: 2
+      source_systems: [retailer_replenishment, TMS_store_delivery]
+    cost:
+      modeled_freight_cost_usd_per_case: 0.18
+      source_systems: [retailer_transport_management]
+
+events:
+  - id: TAC_001_sugar_oils_inbound_delay
+    event_horizon: tactical
+    event_type: raw_material_inbound_delay
+    status: active
+    trigger_window:
+      expected_start_in_days: 3
+      expected_duration_days: 8
+      planning_bucket: daily
+    business_question: How should Longmont protect store availability when sugar and oils inbound shipments are delayed?
+    signal_sources:
+      - system: SAP_material_management
+        events: [purchase_order_delivery_exception]
+      - system: TMS_carrier_tracking
+        events: [late_tanker, late_bulk_sugar_load]
+    affected_model_objects:
+      nodes:
+        - supplier_sugar_bulk_refiner
+        - supplier_oils_fats_regional
+        - inventory_sugar_oils_receiving
+        - processing_fruit_spread_network
+        - plant_longmont_frozen_sandwich
+        - frozen_inventory_longmont
+        - cold_dc_west
+        - retailer_dc_grocery_mass
+        - grocery_mass_store
+      relationships:
+        - rel_sugar_to_sugar_oils_inventory
+        - rel_oils_to_sugar_oils_inventory
+        - rel_sugar_oils_to_secondary_processing
+        - rel_fruit_spread_to_sandwich_plants
+        - rel_longmont_to_fg_inventory
+        - rel_longmont_fg_to_west_dc
+        - rel_west_dc_to_grocery_mass
+        - rel_grocery_mass_dc_to_store
+    overlay_patches:
+      - target_type: node
+        target_id: inventory_sugar_oils_receiving
+        metric: sweetener_fat_composite_days_of_cover
+        baseline_value: 10
+        scenario_value: 3
+        operation: replace
+      - target_type: relationship
+        target_id: rel_sugar_to_sugar_oils_inventory
+        path: lead_time.modeled_mean_days
+        baseline_value: 4
+        scenario_value: 9
+        operation: replace
+      - target_type: relationship
+        target_id: rel_oils_to_sugar_oils_inventory
+        path: lead_time.modeled_mean_days
+        baseline_value: 5
+        scenario_value: 10
+        operation: replace
+    scenario_assumptions:
+      horizon_days: 30
+      initial_composite_cover_days: 3
+      supplier_delay_days: 5
+      weekly_store_demand_cases: 120000
+      retailer_OTIF_penalty_usd_per_late_case: 2.4
+      lost_margin_usd_per_unfulfilled_case: 5.1
+    estimated_no_action_impact:
+      service_risk: high
+    candidate_interventions:
+      - id: expedite_sugar_oils_shipments
+        action_type: transport_expedite
+        incremental_cost_usd: 85000
+        expected_effect: Recover inbound sugar and oil deliveries within two days and protect store replenishment.
+        risk: carrier_capacity
+      - id: source_emergency_regional_supply
+        action_type: alternate_source_fulfillment
+        incremental_cost_usd: 135000
+        expected_effect: Cover most of the delayed volume through qualified regional sugar and oil suppliers.
+        risk: spot_price_and_quality_release
+      - id: prioritize_longmont_and_adjust_schedule
+        action_type: allocation_priority
+        incremental_cost_usd: 45000
+        expected_effect: Reserve available ingredients for Longmont and sequence priority SKUs until inbound supply recovers.
+        risk: deferred_low_priority_orders
+    recommended_intervention_id: source_emergency_regional_supply

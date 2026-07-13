@@ -12,6 +12,7 @@ export const COLUMNS = [
   { key: 'fg_inventory', title: 'FG INVENTORY',  layers: ['finished_goods_inventory'] },
   { key: 'cold_dc',      title: 'COLD CHAIN DC', layers: ['distribution'] },
   { key: 'retailer_dc',  title: 'RETAILER DC',   layers: ['retailer_replenishment', 'foodservice_replenishment'] },
+  { key: 'store',        title: 'STORE',         layers: ['store_replenishment'] },
 ];
 
 /* Display names + primary KPI (drives the node sub-label, node health
@@ -52,6 +53,7 @@ export const NODE_META = {
   retailer_dc_grocery_mass: { name: 'Grocery & Mass', primaryKpi: 'grocery_mass_weekly_receipts_cases', order: 0 },
   retailer_dc_foodservice:  { name: 'Foodservice',    primaryKpi: 'foodservice_weekly_receipts_cases', order: 1 },
   retailer_dc_walmart_sams: { name: "Walmart / Sam's",primaryKpi: 'walmart_sams_weekly_receipts_cases', order: 2 },
+  grocery_mass_store: { name: 'Grocery Store', primaryKpi: 'store_shelf_fill_rate_pct', order: 0 },
 };
 
 /* origins = the node(s) the alert signal ORIGINATES from (not impact — impact
@@ -60,24 +62,12 @@ export const NODE_META = {
 /* alerts are named after the sensing agent that raised them:
    "{Alert Source} Agent", from the alert's primary signal system */
 export const ALERT_META = {
-  LT_001_peanut_price_weather_supply_risk:   { code: 'WEATHER INTEL AGENT',  title: 'Peanut price & weather supply risk',
-    origins: ['supplier_peanuts_southeast_contract'],
-    sensed: 'Weather intelligence over the Southeast peanut belt plus forward-price and supplier-quote revisions point to a weather-driven supply squeeze: contract cost inflates, committed and emergency capacity tighten, and inbound lead time stretches over a ~90-day window.' },
-  LT_002_fruit_base_crop_yield_pressure:     { code: 'CROP INTEL AGENT',  title: 'Fruit base crop yield pressure',
-    origins: ['supplier_fruit_west_bulk'],
-    sensed: 'Drought reports and crop-yield downgrades in western fruit regions signal reduced fruit-base availability: bulk cost climbs, weekly ship capacity falls, and replenishment lead time lengthens through the season.' },
-  LT_003_packaging_resin_and_paperboard_inflation: { code: 'MARKET INTEL AGENT', title: 'Packaging resin & paperboard inflation',
-    origins: ['supplier_film_wrap_converter', 'supplier_carton_corrugate_converter'],
-    sensed: 'Resin price-increase reports and paperboard allocation notices from converters signal packaging inflation: wrapper and carton unit costs rise while converter lead times extend and cover thins.' },
-  TAC_001_late_reefer_to_walmart_sams_dc:    { code: 'TMS TRACKING AGENT', title: "Late reefer → Walmart/Sam's DC",
-    origins: ['cold_dc_central'],
-    sensed: "Carrier tracking and EDI 214 status show a delayed in-transit reefer out of Central Cold DC — ETA slipping ~2.5 days past the Walmart/Sam's appointment window, with ~41k cases exposed and recovery stock at Central reduced." },
-  TAC_002_mccalla_line_downtime_capacity_loss:{ code: 'MES LINE AGENT', title: 'McCalla line downtime · capacity loss',
-    origins: ['plant_mccalla_frozen_sandwich'],
-    sensed: 'MES line monitoring and an open critical maintenance work order show unplanned downtime at McCalla — ~42 downtime hours expected over 5 days, cutting weekly output ~18% and draining the plant FG buffer.' },
-  TAC_003_west_cold_dc_capacity_constraint:  { code: 'WMS CAPACITY AGENT', title: 'West Cold DC freezer capacity constraint',
-    origins: ['cold_dc_west'],
-    sensed: 'WMS capacity dashboard shows West Cold DC freezer fill breaching its limit with an inbound appointment backlog and a 3PL freezer maintenance notice — inbound pallet slots collapse and premium overflow rates kick in for ~7 days.' },
+  TAC_001_sugar_oils_inbound_delay: {
+    code: 'INBOUND DELAY AGENT',
+    title: 'Sugar & oils inbound delay',
+    origins: ['supplier_sugar_bulk_refiner', 'supplier_oils_fats_regional'],
+    sensed: 'SAP purchase-order exceptions and carrier tracking show both the bulk sugar load and oil tanker arriving five days late. Composite ingredient cover is projected to fall to three days, constraining fruit-spread output and Longmont store replenishment.',
+  },
 };
 
 /* factual "expected shift" lines derived from the overlay patches */
@@ -104,9 +94,10 @@ export function columnOf(node) {
   return COLUMNS.findIndex(c => c.layers.includes(node.supply_chain_layer));
 }
 export function kpiOf(node, name) {
-  return (node.kpis || []).find(k => k.name === name);
+  return (node?.kpis || []).find(k => k.name === name);
 }
 export function primaryKpiOf(node) {
+  if (!node) return undefined;
   const meta = NODE_META[node.id];
   return kpiOf(node, meta?.primaryKpi) || (node.kpis || [])[0];
 }
@@ -342,6 +333,9 @@ export const DAYS_PER_MONTH = 30.4;
 
 /* what each intervention concretely does (engine-true) + the nodes it acts on */
 export const INTERVENTION_NODES = {
+  expedite_sugar_oils_shipments: ['supplier_sugar_bulk_refiner', 'supplier_oils_fats_regional', 'inventory_sugar_oils_receiving'],
+  source_emergency_regional_supply: ['supplier_sugar_bulk_refiner', 'supplier_oils_fats_regional', 'inventory_sugar_oils_receiving', 'processing_fruit_spread_network'],
+  prioritize_longmont_and_adjust_schedule: ['inventory_sugar_oils_receiving', 'processing_fruit_spread_network', 'plant_longmont_frozen_sandwich'],
   expedite_current_reefer: ['cold_dc_central', 'retailer_dc_walmart_sams'],
   ship_replacement_from_southeast_dc: ['cold_dc_southeast', 'retailer_dc_walmart_sams'],
   split_replacement_central_and_southeast_dc: ['cold_dc_central', 'cold_dc_southeast', 'retailer_dc_walmart_sams'],
@@ -363,6 +357,9 @@ export const INTERVENTION_NODES = {
 };
 
 export const INTERVENTION_PROPOSALS = {
+  expedite_sugar_oils_shipments: 'Expedite the delayed bulk sugar load and oil tanker to recover inbound supply within two days.',
+  source_emergency_regional_supply: 'Release qualified regional supply to cover most of the delayed sugar and oil volume.',
+  prioritize_longmont_and_adjust_schedule: 'Reserve available ingredients for Longmont and sequence priority store SKUs until inbound supply recovers.',
   expedite_current_reefer: 'Upgrade the delayed Central→Walmart reefer to a team-driver expedite: recover ~1.5 days of transit at 2.2× lane freight on the affected load.',
   ship_replacement_from_southeast_dc: "Cut replacement orders at SE Cold DC covering ~90% of Walmart's shortfall, shipped on the 1.5-day lane at 1.8× freight while the late load continues inbound.",
   split_replacement_central_and_southeast_dc: "Split replacement shipments across Central + SE Cold DC to cover ~96% of Walmart's at-risk cases before the requested delivery date, at ~1.9× freight.",
