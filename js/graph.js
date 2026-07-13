@@ -27,8 +27,11 @@ export function computeLayout() {
     if (c >= 0) byCol[c].push(node);
   }
   const pos = {};
-  const yTop = 118, yBottom = 838;
   byCol.forEach((nodes, c) => {
+    // The supplier column carries ten nodes; give it a little more vertical
+    // breathing room while keeping the remaining tiers visually aligned.
+    const yTop = c === 0 ? 82 : 118;
+    const yBottom = c === 0 ? 858 : 838;
     nodes.sort((a, b) => (NODE_META[a.id]?.order ?? 99) - (NODE_META[b.id]?.order ?? 99));
     const step = (yBottom - yTop) / nodes.length;
     nodes.forEach((node, i) => {

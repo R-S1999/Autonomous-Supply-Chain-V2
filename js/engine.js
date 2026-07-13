@@ -61,7 +61,15 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
     fgToDc: [], retail,
   };
 
-  const oilArrivals = new Map([[firstArrival, OIL_WEEKLY_LB], [10, OIL_WEEKLY_LB], [17, OIL_WEEKLY_LB], [24, OIL_WEEKLY_LB]]);
+  // Seed a recurring weekly tanker schedule across the full run. In the
+  // disruption scenario only the first Day-3 load moves to its delayed or
+  // intervention-adjusted arrival; every later load stays on the BAU cadence.
+  const oilArrivals = new Map();
+  for (let arrival = 3; arrival < horizon; arrival += 7) oilArrivals.set(arrival, OIL_WEEKLY_LB);
+  if (scenario) {
+    oilArrivals.delete(3);
+    oilArrivals.set(firstArrival, (oilArrivals.get(firstArrival) || 0) + OIL_WEEKLY_LB);
+  }
   if (intervention?.emergencyArrival != null) oilArrivals.set(intervention.emergencyArrival, (oilArrivals.get(intervention.emergencyArrival) || 0) + intervention.emergencyQty);
 
   for (let day = 0; day < horizon; day++) {
@@ -125,14 +133,16 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
 
     const oilCover = state.oil / OIL_DAY;
     const fgCover = state.fg / TOTAL_DEMAND_DAY;
-    const dcCover = state.dc / TOTAL_DEMAND_DAY;
+    // DC health uses inventory position (on-hand + confirmed inbound), so a
+    // healthy just-in-time flow is not shown red immediately after dispatch.
+    const dcCover = (state.dc + state.fgToDc.reduce((sum, shipment) => sum + shipment.qty, 0)) / TOTAL_DEMAND_DAY;
     const productionRatio = producedCases / desiredCases;
     const lowestKey = Object.keys(dailyFill).sort((a, b) => dailyFill[a] - dailyFill[b])[0];
     const disruptedOil = scenario && day >= 3 && day < firstArrival;
     const downstreamDisrupted = productionRatio < 0.98 || Object.values(dailyFill).some(v => v < 0.98);
     const nodeHealth = {
       supplier_oils_fats_regional: disruptedOil ? 'red' : 'good',
-      inventory_sugar_oils_receiving: health(oilCover / 3),
+      inventory_sugar_oils_receiving: health(oilCover / 2),
       processing_fruit_spread_network: health(productionRatio),
       plant_longmont_frozen_sandwich: health(productionRatio),
       frozen_inventory_longmont: health(fgCover / 2), cold_dc_west: health(dcCover / 2),
