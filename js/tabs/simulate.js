@@ -1,7 +1,7 @@
-import { renderGraph } from '../graph.js?v=costledger3';
+import { renderGraph } from '../graph.js?v=autocostcards2';
 import { TimelinePlayer } from '../sim.js';
 import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, money, pretty, kNum } from '../model.js?v=costledger';
-import { runBau, runScenario } from '../engine.js?v=costledger';
+import { runBau, runScenario } from '../engine.js?v=autocostcards';
 
 function postRunSummary(bau, run, event) {
   const affected = event.affected_model_objects?.nodes || [];
@@ -36,9 +36,15 @@ function postRunSummary(bau, run, event) {
     if (state === 'disrupted' || !edgeStates[id]) edgeStates[id] = state;
   }
   const bau30 = bau.frames[29], total = run.total - bau30.cumTotal;
-  const nodeCosts = Object.fromEntries(affected.map(id => [id, {
-    cost: (run.nodeCosts?.[id] || 0) - (bau30.nodeCosts?.[id] || 0), total,
-  }]));
+  const nodeCosts = Object.fromEntries(affected.map(id => {
+    const scenarioComponents = run.nodeCostComponents?.[id] || {};
+    const bauComponents = bau30.nodeCostComponents?.[id] || {};
+    const buckets = new Set([...Object.keys(scenarioComponents), ...Object.keys(bauComponents)]);
+    const components = [...buckets].map(key => ({
+      key, value: (scenarioComponents[key] || 0) - (bauComponents[key] || 0),
+    })).filter(x => Math.abs(x.value) >= .5).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    return [id, { cost: (run.nodeCosts?.[id] || 0) - (bau30.nodeCosts?.[id] || 0), total, components }];
+  }));
   return { compare, nodeCosts, frame: { nodeHealth, edgeStates, valueOverrides, nodeSummaryLabels } };
 }
 
@@ -72,7 +78,7 @@ export function renderSimulate(view, ctx) {
   const solutionPanel = view.querySelector('#solution-panel'), placeholder = view.querySelector('#solution-placeholder'); let player;
   const play = () => {
     let worstSoFar = { name: '—', fill: 101, day: 0 };
-    graph.setCompare(null); graph.setNodeCosts(null);
+    graph.setCompare(null); graph.setNodeCosts(null); graph.clearNodeCostCards();
     solutionPanel.classList.add('hidden'); solutionPanel.classList.remove('reveal'); placeholder.classList.remove('hidden');
     view.querySelectorAll('[data-solution]').forEach(el => el.classList.remove('ready'));
     player = new TimelinePlayer(run.frames, (f, i) => {
@@ -83,8 +89,8 @@ export function renderSimulate(view, ctx) {
       if (f.lowestRetailer.fill < worstSoFar.fill) worstSoFar = { ...f.lowestRetailer, day: i + 1 };
       lowest.textContent = `${worstSoFar.name} · ${worstSoFar.fill.toFixed(1)}% · DAY ${worstSoFar.day}`;
       if (i === run.frames.length - 1) {
-        graph.setFrame(postRun.frame); graph.setCompare(postRun.compare); graph.setNodeCosts(postRun.nodeCosts);
-        phase.textContent = 'POST-RUN LOWS · CLICK NODES FOR COST'; phase.className = 'phase aftermath';
+        graph.setFrame(postRun.frame); graph.setCompare(postRun.compare); graph.setNodeCosts(postRun.nodeCosts); graph.showNodeCostCards(postRun.nodeCosts);
+        phase.textContent = 'POST-RUN COSTS · NODE COMPONENTS DISPLAYED'; phase.className = 'phase aftermath';
         view.querySelectorAll('[data-solution]').forEach((el, n) => { el.classList.add('ready'); el.querySelector('.sim-status').textContent = `${money(interventions[n].avoided)} avoided`; });
         placeholder.classList.add('hidden'); solutionPanel.classList.remove('hidden'); solutionPanel.classList.add('reveal');
       }

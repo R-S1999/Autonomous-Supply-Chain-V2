@@ -49,6 +49,7 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
   const oilEfficiency = intervention?.oilEfficiency ?? 1;
   const costs = emptyCosts();
   const nodeCosts = {};
+  const nodeCostComponents = {};
   const frames = [];
 
   const retail = Object.fromEntries(Object.entries(RETAILERS).map(([key, r]) => [key, {
@@ -76,7 +77,11 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
   for (let day = 0; day < horizon; day++) {
     const add = (bucket, value, nodeId) => {
       costs[bucket] += value;
-      if (nodeId) nodeCosts[nodeId] = (nodeCosts[nodeId] || 0) + value;
+      if (nodeId) {
+        nodeCosts[nodeId] = (nodeCosts[nodeId] || 0) + value;
+        const components = (nodeCostComponents[nodeId] ||= {});
+        components[bucket] = (components[bucket] || 0) + value;
+      }
     };
     // Fixed operating costs still accrue in BAU and scenario runs.
     add('raw_material_cost', 69000, 'inventory_sugar_oils_receiving');
@@ -185,11 +190,12 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
       lowestRetailer: { key: lowestKey, name: NAMES[lowestKey], fill: dailyFill[lowestKey] * 100 },
       inventory: { oilCover, fgCover, dcCover }, production: { cases: producedCases, ratio: productionRatio },
       cum: { ...costs }, cumTotal: Object.values(costs).reduce((a, b) => a + b, 0), nodeCosts: { ...nodeCosts },
+      nodeCostComponents: Object.fromEntries(Object.entries(nodeCostComponents).map(([id, components]) => [id, { ...components }])),
     });
   }
   const last = frames.at(-1);
   const worst = frames.reduce((w, f) => f.lowestRetailer.fill < w.fill ? { ...f.lowestRetailer, day: f.t + 1 } : w, { name: '', fill: 101, day: 0 });
-  return { frames, horizon, total: last.cumTotal, cum: last.cum, nodeCosts: last.nodeCosts, worstRetailer: worst };
+  return { frames, horizon, total: last.cumTotal, cum: last.cum, nodeCosts: last.nodeCosts, nodeCostComponents: last.nodeCostComponents, worstRetailer: worst };
 }
 
 const cache = {};

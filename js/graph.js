@@ -156,6 +156,9 @@ export function renderGraph(container, opts = {}) {
     <strong></strong>
     <p></p>`;
   container.appendChild(agentActionCard);
+  const nodeCostLayer = document.createElement('div');
+  nodeCostLayer.className = 'sim-node-cost-layer';
+  container.appendChild(nodeCostLayer);
   let currentFrame = null;
   let hideTimer = null;
   let pinnedNode = null;
@@ -430,6 +433,40 @@ export function renderGraph(container, opts = {}) {
     /* worst-in-disruption-window vs BAU-normal comparison shown in popovers */
     setCompare(map) { compareMap = map; if (pinnedNode) showPopover(pinnedNode); },
     setNodeCosts(map) { nodeCostMap = map; if (pinnedNode) showPopover(pinnedNode); },
+    showNodeCostCards(map) {
+      nodeCostLayer.innerHTML = '';
+      const wrapR = container.getBoundingClientRect(), placed = [];
+      const entries = Object.entries(map || {}).filter(([, impact]) => Math.abs(impact.cost) >= .5)
+        .sort(([a], [b]) => nodeEls[a].getBoundingClientRect().top - nodeEls[b].getBoundingClientRect().top);
+      entries.forEach(([nodeId, impact], index) => {
+        const ring = nodeEls[nodeId]?.querySelector('.node-ring'); if (!ring) return;
+        const card = document.createElement('div'); card.className = `sim-node-cost-card ${impact.cost < 0 ? 'offset' : ''}`;
+        card.style.animationDelay = `${index * 90}ms`;
+        card.innerHTML = `<span>NODE COST · ${NODE_META[nodeId]?.name || nodeId}</span><strong>${nodeImpactMoney(impact.cost)}</strong>
+          <div>${impact.components.map(component => `<p><em>${pretty(component.key)}</em><b>${nodeImpactMoney(component.value)}</b></p>`).join('')}</div>`;
+        nodeCostLayer.appendChild(card);
+
+        const nodeR = ring.getBoundingClientRect(), cardW = 168;
+        const placeAbove = pos[nodeId]?.col === 1;
+        const onLeft = nodeR.left - wrapR.left > wrapR.width * .68;
+        let left = placeAbove ? nodeR.left - wrapR.left + nodeR.width / 2 - cardW / 2
+          : onLeft ? nodeR.left - wrapR.left - cardW - 13 : nodeR.right - wrapR.left + 13;
+        let top = nodeR.top - wrapR.top - 12;
+        card.style.width = `${cardW}px`; card.style.left = `${Math.max(7, Math.min(left, wrapR.width - cardW - 7))}px`; card.style.top = '0px';
+        const height = card.offsetHeight; left = parseFloat(card.style.left);
+        if (placeAbove) top = nodeR.top - wrapR.top - height - 15;
+        for (let pass = 0; pass < 10; pass++) {
+          const hit = placed.find(box => left < box.right + 5 && left + cardW > box.left - 5 && top < box.bottom + 5 && top + height > box.top - 5);
+          if (!hit) break;
+          top = hit.bottom + 6;
+          if (top + height > wrapR.height - 7) top = Math.max(7, hit.top - height - 6);
+        }
+        top = Math.max(7, Math.min(top, wrapR.height - height - 7));
+        card.style.top = `${top}px`; card.dataset.side = placeAbove ? 'above' : onLeft ? 'left' : 'right';
+        placed.push({ left, right: left + cardW, top, bottom: top + height });
+      });
+    },
+    clearNodeCostCards() { nodeCostLayer.innerHTML = ''; },
     showPopover,
     destroy() { cancelAnimationFrame(raf); container.innerHTML = ''; container.classList.remove('graph-wrap'); },
   };
