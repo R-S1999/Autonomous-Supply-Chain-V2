@@ -1,43 +1,10 @@
 import { renderGraph } from '../graph.js?v=costledger3';
-import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js?v=costledger';
+import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_AGENT_STEPS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js?v=decidesteps';
 import { runBau, runScenario } from '../engine.js?v=costledger';
 
 // Enterprise-system and node routing is deterministic. OpenAI generates the
 // concise user-facing action message for every routed step, which keeps the
 // workflow safe, relevant to the selected intervention and visually stable.
-const STEP_BLUEPRINTS = {
-  expedite_delayed_oil_tanker: [
-    ['supplier_oils_fats_regional', 'TMS', 'Locating the delayed oil tanker and confirming driver hours'],
-    ['supplier_oils_fats_regional', 'TMS', 'Upgrading the load to team-driver expedited service'],
-    ['inventory_sugar_oils_receiving', 'SAP', 'Updating the oil purchase-order arrival date'],
-    ['inventory_sugar_oils_receiving', 'WMS', 'Reserving a priority tanker unloading slot'],
-    ['processing_fruit_spread_network', 'APS', 'Refreshing oil availability for fruit-spread batches'],
-    ['plant_longmont_frozen_sandwich', 'MES', 'Confirming the recovered Longmont production plan'],
-    ['retailer_costco', 'OMS', 'Reconfirming Costco order fulfillment'],
-    ['retailer_sams_club', 'OMS', "Reconfirming Sam's Club order fulfillment"],
-  ],
-  source_emergency_oil_supply: [
-    ['inventory_sugar_oils_receiving', 'SAP', 'Reading the uncovered oil requirement and tank balance'],
-    ['supplier_oils_fats_regional', 'SRM', 'Finding approved regional oil capacity'],
-    ['supplier_oils_fats_regional', 'QMS', 'Confirming the alternate lot specification'],
-    ['inventory_sugar_oils_receiving', 'SAP', 'Releasing the emergency oil purchase order'],
-    ['inventory_sugar_oils_receiving', 'WMS', 'Booking priority receiving and quality release'],
-    ['processing_fruit_spread_network', 'APS', 'Refreshing the fruit-spread material plan'],
-    ['plant_longmont_frozen_sandwich', 'MES', 'Confirming full Longmont production recovery'],
-    ['cold_dc_west', 'WMS', 'Protecting retailer deployment quantities'],
-  ],
-  prioritize_longmont_oil_allocation: [
-    ['inventory_sugar_oils_receiving', 'SAP', 'Reading usable oil inventory and open requirements'],
-    ['processing_fruit_spread_network', 'APS', 'Allocating oil to lower-consumption priority recipes'],
-    ['plant_longmont_frozen_sandwich', 'MES', 'Resequencing Longmont to protected retailer SKUs'],
-    ['frozen_inventory_longmont', 'WMS', 'Reserving finished goods for priority orders'],
-    ['cold_dc_west', 'APS', 'Rebalancing the West DC deployment plan'],
-    ['retailer_sams_club', 'OMS', "Protecting Sam's Club committed orders"],
-    ['retailer_costco', 'OMS', 'Protecting Costco committed orders'],
-    ['retailer_other', 'OMS', 'Publishing revised availability to other retailers'],
-  ],
-};
-
 function economics(event, interventionId) {
   const bau = runBau().frames[29], noAction = runScenario(event.id), selected = runScenario(event.id, interventionId);
   return { noAction: noAction.total - bau.cumTotal, net: selected.total - bau.cumTotal, avoided: noAction.total - selected.total };
@@ -133,7 +100,7 @@ export function renderAct(view, ctx) {
   }
   async function generateAndRun() {
     const token = ++generation; aborter?.abort(); aborter = new AbortController(); clearTimers(); graph.clearAgentAction();
-    const intervention = currentIntervention(), blueprint = STEP_BLUEPRINTS[intervention.id];
+    const intervention = currentIntervention(), blueprint = INTERVENTION_AGENT_STEPS[intervention.id];
     view.querySelector('#act-desc').textContent = INTERVENTION_PROPOSALS[intervention.id];
     source.textContent = 'OPENAI · GENERATING ENTERPRISE MESSAGES'; source.className = 'agent-source generating';
     update.innerHTML = '<b>GENERATING WORKFLOW</b><span>Creating enterprise-system messages for the selected intervention…</span>';

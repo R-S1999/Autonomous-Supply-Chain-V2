@@ -381,6 +381,40 @@ export const INTERVENTION_PROPOSALS = {
   reserve_converter_capacity: 'Reserve print slots and film capacity ahead of the increase, capping ~50% of wrapper and ~35% of carton inflation ($180K reservation).',
 };
 
+/* Enterprise-system execution sequence shared by Decide and Act. */
+export const INTERVENTION_AGENT_STEPS = {
+  expedite_delayed_oil_tanker: [
+    ['supplier_oils_fats_regional', 'TMS', 'Locate the delayed tanker and confirm available driver hours.'],
+    ['supplier_oils_fats_regional', 'TMS', 'Upgrade the load to team-driver expedited service.'],
+    ['inventory_sugar_oils_receiving', 'SAP', 'Update the oil purchase-order arrival date.'],
+    ['inventory_sugar_oils_receiving', 'WMS', 'Reserve a priority tanker unloading slot.'],
+    ['processing_fruit_spread_network', 'APS', 'Refresh oil availability for fruit-spread batches.'],
+    ['plant_longmont_frozen_sandwich', 'MES', 'Confirm the recovered Longmont production plan.'],
+    ['retailer_costco', 'OMS', 'Reconfirm Costco order fulfillment.'],
+    ['retailer_sams_club', 'OMS', "Reconfirm Sam's Club order fulfillment."],
+  ],
+  source_emergency_oil_supply: [
+    ['inventory_sugar_oils_receiving', 'SAP', 'Read the uncovered oil requirement and tank balance.'],
+    ['supplier_oils_fats_regional', 'SRM', 'Find approved regional oil capacity.'],
+    ['supplier_oils_fats_regional', 'QMS', 'Confirm the alternate lot specification.'],
+    ['inventory_sugar_oils_receiving', 'SAP', 'Release the emergency oil purchase order.'],
+    ['inventory_sugar_oils_receiving', 'WMS', 'Book priority receiving and quality release.'],
+    ['processing_fruit_spread_network', 'APS', 'Refresh the Fruit Spread Plant material plan.'],
+    ['plant_longmont_frozen_sandwich', 'MES', 'Confirm full Longmont production recovery.'],
+    ['cold_dc_west', 'WMS', 'Protect retailer deployment quantities.'],
+  ],
+  prioritize_longmont_oil_allocation: [
+    ['inventory_sugar_oils_receiving', 'SAP', 'Read usable oil inventory and open requirements.'],
+    ['processing_fruit_spread_network', 'APS', 'Allocate oil to lower-consumption priority recipes.'],
+    ['plant_longmont_frozen_sandwich', 'MES', 'Resequence Longmont to protected retailer SKUs.'],
+    ['frozen_inventory_longmont', 'WMS', 'Reserve finished goods for priority orders.'],
+    ['cold_dc_west', 'APS', 'Rebalance the West DC deployment plan.'],
+    ['retailer_sams_club', 'OMS', "Protect Sam's Club committed orders."],
+    ['retailer_costco', 'OMS', 'Protect Costco committed orders.'],
+    ['retailer_other', 'OMS', 'Publish revised availability to other retailers.'],
+  ],
+};
+
 export function actionNodes(event, intervention) {
   const set = new Set([
     ...(ALERT_META[event.id]?.origins || []),
