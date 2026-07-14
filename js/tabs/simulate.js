@@ -1,4 +1,4 @@
-import { renderGraph } from '../graph.js?v=autocostcards2';
+import { renderGraph } from '../graph.js?v=cardlayout';
 import { TimelinePlayer } from '../sim.js';
 import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, money, pretty, kNum } from '../model.js?v=costledger';
 import { runBau, runScenario } from '../engine.js?v=autocostcards';

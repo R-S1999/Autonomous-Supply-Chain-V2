@@ -435,9 +435,15 @@ export function renderGraph(container, opts = {}) {
     setNodeCosts(map) { nodeCostMap = map; if (pinnedNode) showPopover(pinnedNode); },
     showNodeCostCards(map) {
       nodeCostLayer.innerHTML = '';
-      const wrapR = container.getBoundingClientRect(), placed = [];
+      const wrapR = container.getBoundingClientRect(), placed = [], edge = 7, gap = 13;
+      const nodeBoxes = Object.values(nodeEls).map(node => {
+        const r = node.querySelector('.node-ring').getBoundingClientRect();
+        return { left: r.left - wrapR.left - 7, right: r.right - wrapR.left + 7, top: r.top - wrapR.top - 7, bottom: r.bottom - wrapR.top + 38 };
+      });
+      const overlaps = (a, b, pad = 0) => a.left < b.right + pad && a.right > b.left - pad && a.top < b.bottom + pad && a.bottom > b.top - pad;
       const entries = Object.entries(map || {}).filter(([, impact]) => Math.abs(impact.cost) >= .5)
-        .sort(([a], [b]) => nodeEls[a].getBoundingClientRect().top - nodeEls[b].getBoundingClientRect().top);
+        .sort(([a, av], [b, bv]) => (bv.components?.length || 0) - (av.components?.length || 0)
+          || nodeEls[a].getBoundingClientRect().top - nodeEls[b].getBoundingClientRect().top);
       entries.forEach(([nodeId, impact], index) => {
         const ring = nodeEls[nodeId]?.querySelector('.node-ring'); if (!ring) return;
         const card = document.createElement('div'); card.className = `sim-node-cost-card ${impact.cost < 0 ? 'offset' : ''}`;
@@ -447,22 +453,31 @@ export function renderGraph(container, opts = {}) {
         nodeCostLayer.appendChild(card);
 
         const nodeR = ring.getBoundingClientRect(), cardW = 168;
-        const placeAbove = pos[nodeId]?.col === 1;
-        const onLeft = nodeR.left - wrapR.left > wrapR.width * .68;
-        let left = placeAbove ? nodeR.left - wrapR.left + nodeR.width / 2 - cardW / 2
-          : onLeft ? nodeR.left - wrapR.left - cardW - 13 : nodeR.right - wrapR.left + 13;
-        let top = nodeR.top - wrapR.top - 12;
-        card.style.width = `${cardW}px`; card.style.left = `${Math.max(7, Math.min(left, wrapR.width - cardW - 7))}px`; card.style.top = '0px';
-        const height = card.offsetHeight; left = parseFloat(card.style.left);
-        if (placeAbove) top = nodeR.top - wrapR.top - height - 15;
-        for (let pass = 0; pass < 10; pass++) {
-          const hit = placed.find(box => left < box.right + 5 && left + cardW > box.left - 5 && top < box.bottom + 5 && top + height > box.top - 5);
-          if (!hit) break;
-          top = hit.bottom + 6;
-          if (top + height > wrapR.height - 7) top = Math.max(7, hit.top - height - 6);
-        }
-        top = Math.max(7, Math.min(top, wrapR.height - height - 7));
-        card.style.top = `${top}px`; card.dataset.side = placeAbove ? 'above' : onLeft ? 'left' : 'right';
+        card.style.width = `${cardW}px`; card.style.left = '0px'; card.style.top = '0px';
+        const height = card.offsetHeight, nx1 = nodeR.left - wrapR.left, nx2 = nodeR.right - wrapR.left;
+        const ny1 = nodeR.top - wrapR.top, ny2 = nodeR.bottom - wrapR.top, cx = (nx1 + nx2) / 2, cy = (ny1 + ny2) / 2;
+        const candidates = [
+          { left: nx2 + gap, top: cy - height / 2, side: 'right' },
+          { left: nx1 - cardW - gap, top: cy - height / 2, side: 'left' },
+          { left: cx - cardW / 2, top: ny1 - height - gap, side: 'above' },
+          { left: cx - cardW / 2, top: ny2 + gap, side: 'below' },
+          { left: nx2 + gap, top: ny1 - height - gap, side: 'right' },
+          { left: nx1 - cardW - gap, top: ny1 - height - gap, side: 'left' },
+          { left: nx2 + gap, top: ny2 + gap, side: 'right' },
+          { left: nx1 - cardW - gap, top: ny2 + gap, side: 'left' },
+        ].map(candidate => ({ ...candidate, right: candidate.left + cardW, bottom: candidate.top + height }));
+        const score = candidate => {
+          let value = Math.hypot((candidate.left + cardW / 2) - cx, (candidate.top + height / 2) - cy);
+          if (candidate.left < edge || candidate.top < edge || candidate.right > wrapR.width - edge || candidate.bottom > wrapR.height - edge) value += 1e9;
+          value += placed.filter(box => overlaps(candidate, box, 6)).length * 1e8;
+          value += nodeBoxes.filter(box => overlaps(candidate, box, 3)).length * 1e5;
+          return value;
+        };
+        candidates.sort((a, b) => score(a) - score(b));
+        const best = candidates[0];
+        const left = Math.max(edge, Math.min(best.left, wrapR.width - cardW - edge));
+        const top = Math.max(edge, Math.min(best.top, wrapR.height - height - edge));
+        card.style.left = `${left}px`; card.style.top = `${top}px`; card.dataset.side = best.side;
         placed.push({ left, right: left + cardW, top, bottom: top + height });
       });
     },
