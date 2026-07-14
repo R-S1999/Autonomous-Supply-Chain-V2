@@ -48,6 +48,7 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
   const firstArrival = scenario ? (intervention?.firstArrival ?? 8) : 3;
   const oilEfficiency = intervention?.oilEfficiency ?? 1;
   const costs = emptyCosts();
+  const nodeCosts = {};
   const frames = [];
 
   const retail = Object.fromEntries(Object.entries(RETAILERS).map(([key, r]) => [key, {
@@ -73,13 +74,18 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
   if (intervention?.emergencyArrival != null) oilArrivals.set(intervention.emergencyArrival, (oilArrivals.get(intervention.emergencyArrival) || 0) + intervention.emergencyQty);
 
   for (let day = 0; day < horizon; day++) {
-    const add = (bucket, value) => { costs[bucket] += value; };
+    const add = (bucket, value, nodeId) => {
+      costs[bucket] += value;
+      if (nodeId) nodeCosts[nodeId] = (nodeCosts[nodeId] || 0) + value;
+    };
     // Fixed operating costs still accrue in BAU and scenario runs.
-    add('raw_material_cost', 69000); add('packaging_cost', 23000);
-    add('ambient_storage_cost', 900); add('quality_hold_or_rework_cost', 600);
-    add('spoilage_or_ageing_writeoff_cost', 250);
+    add('raw_material_cost', 69000, 'inventory_sugar_oils_receiving');
+    add('packaging_cost', 23000, 'inventory_packaging_receiving');
+    add('ambient_storage_cost', 900, 'inventory_sugar_oils_receiving');
+    add('quality_hold_or_rework_cost', 600, 'processing_fruit_spread_network');
+    add('spoilage_or_ageing_writeoff_cost', 250, 'inventory_sugar_oils_receiving');
 
-    if (intervention && day === 3) add(intervention.feeBucket, intervention.fee);
+    if (intervention && day === 3) add(intervention.feeBucket, intervention.fee, 'supplier_oils_fats_regional');
     state.oil += oilArrivals.get(day) || 0;
 
     // Longmont produces against actual oil availability. Priority scheduling
@@ -90,13 +96,13 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
     const producedCases = desiredCases * (oilRequired > 0 ? oilUsed / oilRequired : 1);
     state.oil -= oilUsed;
     state.fg += producedCases;
-    add('conversion_cost', producedCases * CASE * 0.041);
-    add('production_downtime_cost', (desiredCases - producedCases) * 3.20);
+    add('conversion_cost', producedCases * CASE * 0.041, 'plant_longmont_frozen_sandwich');
+    add('production_downtime_cost', (desiredCases - producedCases) * 3.20, 'plant_longmont_frozen_sandwich');
 
     // Longmont FG -> West DC pipeline.
     const fgShip = Math.min(TOTAL_DEMAND_DAY, state.fg);
     state.fg -= fgShip; state.fgToDc.push({ day: day + FG_TO_DC_LEAD, qty: fgShip });
-    add('standard_transport_cost', fgShip * (0.38 + 0.093));
+    add('standard_transport_cost', fgShip * (0.38 + 0.093), 'frozen_inventory_longmont');
     state.dc += pipelineArrival(state.fgToDc, day);
 
     // West DC -> retailers. Normal scenarios allocate proportionally; the
@@ -114,7 +120,7 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
     }
     for (const [key, qty] of Object.entries(shipped)) {
       state.retail[key].pipeline.push({ day: day + DC_TO_RETAIL_LEAD, qty });
-      add('standard_transport_cost', qty * RETAILERS[key].freight);
+      add('standard_transport_cost', qty * RETAILERS[key].freight, RETAILERS[key].node);
     }
 
     // Retail receipt, demand fulfillment, OTIF penalty and lost margin.
@@ -125,11 +131,15 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
       rs.onhand -= served; rs.cumulativeDemand += demand; rs.cumulativeServed += served;
       const fill = demand ? served / demand : 1; rs.fillHistory.push(fill); if (rs.fillHistory.length > 7) rs.fillHistory.shift();
       dailyFill[key] = rollingAverage(rs.fillHistory);
-      add('OTIF_penalty_cost', short * r.penalty); add('lost_margin_cost', short * r.margin);
+      add('OTIF_penalty_cost', short * r.penalty, r.node);
+      add('lost_margin_cost', short * r.margin, r.node);
     }
 
-    add('cold_storage_cost', (state.fg + state.dc) * 0.021);
-    add('inventory_carrying_cost', (state.fg + state.dc) * 14 * 0.135 / 365 + state.oil * 0.72 * 0.115 / 365);
+    add('cold_storage_cost', state.fg * 0.021, 'frozen_inventory_longmont');
+    add('cold_storage_cost', state.dc * 0.021, 'cold_dc_west');
+    add('inventory_carrying_cost', state.fg * 14 * 0.135 / 365, 'frozen_inventory_longmont');
+    add('inventory_carrying_cost', state.dc * 14 * 0.135 / 365, 'cold_dc_west');
+    add('inventory_carrying_cost', state.oil * 0.72 * 0.115 / 365, 'inventory_sugar_oils_receiving');
 
     const oilCover = state.oil / OIL_DAY;
     const fgCover = state.fg / TOTAL_DEMAND_DAY;
@@ -163,6 +173,7 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
       processing_fruit_spread_network: { fruit_spread_output_lb_per_week: Math.round(720000 * productionRatio) },
       plant_longmont_frozen_sandwich: { longmont_sandwiches_per_week: Math.round(producedCases * 7 * CASE) },
       frozen_inventory_longmont: { longmont_finished_goods_days_of_cover: Math.round(fgCover * 10) / 10 },
+      cold_dc_west: { west_dc_inventory_days_of_cover: Math.round(dcCover * 10) / 10 },
       retailer_costco: { costco_fill_rate_pct: Math.round(dailyFill.costco * 1000) / 10 },
       retailer_sams_club: { sams_fill_rate_pct: Math.round(dailyFill.sams * 1000) / 10 },
       retailer_other: { other_retailer_fill_rate_pct: Math.round(dailyFill.other * 1000) / 10 },
@@ -173,12 +184,12 @@ export function simulate({ eventId = null, interventionId = null } = {}) {
       nodeHealth, edgeStates, valueOverrides, retailerFill: Object.fromEntries(Object.entries(dailyFill).map(([k, v]) => [k, v * 100])),
       lowestRetailer: { key: lowestKey, name: NAMES[lowestKey], fill: dailyFill[lowestKey] * 100 },
       inventory: { oilCover, fgCover, dcCover }, production: { cases: producedCases, ratio: productionRatio },
-      cum: { ...costs }, cumTotal: Object.values(costs).reduce((a, b) => a + b, 0),
+      cum: { ...costs }, cumTotal: Object.values(costs).reduce((a, b) => a + b, 0), nodeCosts: { ...nodeCosts },
     });
   }
   const last = frames.at(-1);
   const worst = frames.reduce((w, f) => f.lowestRetailer.fill < w.fill ? { ...f.lowestRetailer, day: f.t + 1 } : w, { name: '', fill: 101, day: 0 });
-  return { frames, horizon, total: last.cumTotal, cum: last.cum, worstRetailer: worst };
+  return { frames, horizon, total: last.cumTotal, cum: last.cum, nodeCosts: last.nodeCosts, worstRetailer: worst };
 }
 
 const cache = {};

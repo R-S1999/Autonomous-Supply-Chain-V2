@@ -1,6 +1,6 @@
-import { renderGraph } from '../graph.js?v=nodeagentcards2';
-import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js';
-import { runBau, runScenario } from '../engine.js';
+import { renderGraph } from '../graph.js?v=costledger3';
+import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js?v=costledger';
+import { runBau, runScenario } from '../engine.js?v=costledger';
 
 // Enterprise-system and node routing is deterministic. OpenAI generates the
 // concise user-facing action message for every routed step, which keeps the

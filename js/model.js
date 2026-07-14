@@ -34,11 +34,11 @@ export const NODE_META = {
   inventory_sugar_oils_receiving:{ name: 'Oils & Fats RM',primaryKpi: 'oil_fat_days_of_cover', order: 3 },
   inventory_packaging_receiving: { name: 'Packaging RM',   primaryKpi: 'wrapper_days_of_cover', order: 4 },
 
-  processing_peanut_butter_network: { name: 'Peanut Butter', primaryKpi: 'peanut_butter_output_lb_per_week', order: 0 },
-  processing_fruit_spread_network:  { name: 'Fruit Spread',  primaryKpi: 'fruit_spread_output_lb_per_week', order: 1 },
+  processing_peanut_butter_network: { name: 'Peanut Butter Plant', primaryKpi: 'peanut_butter_output_lb_per_week', order: 0 },
+  processing_fruit_spread_network:  { name: 'Fruit Spread Plant',  primaryKpi: 'fruit_spread_output_lb_per_week', order: 1 },
 
   plant_scottsville_frozen_sandwich: { name: 'Scottsville', primaryKpi: 'scottsville_sandwiches_per_week', order: 0 },
-  plant_longmont_frozen_sandwich:    { name: 'Longmont',    primaryKpi: 'longmont_sandwiches_per_week', order: 1 },
+  plant_longmont_frozen_sandwich:    { name: 'Longmont Uncrustables Plant', primaryKpi: 'longmont_sandwiches_per_week', order: 1 },
   plant_mccalla_frozen_sandwich:     { name: 'McCalla',     primaryKpi: 'mccalla_sandwiches_per_week', order: 2 },
 
   frozen_inventory_scottsville: { name: 'Scottsville FG', primaryKpi: 'scottsville_finished_goods_days_of_cover', order: 0 },

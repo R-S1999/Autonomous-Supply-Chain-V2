@@ -1,7 +1,7 @@
 // BAU cost-to-fulfill cards (1-month / 6-month) computed by the DES engine.
 // Hover breakdown = every decision-layer cost bucket accumulated by the run.
-import { money, pretty, COST_COMPONENT_COUNT } from './model.js';
-import { runBau } from './engine.js';
+import { money, pretty, COST_COMPONENT_COUNT } from './model.js?v=costledger';
+import { runBau } from './engine.js?v=costledger';
 
 export function bauCards() {
   const bau = runBau();
@@ -12,10 +12,11 @@ export function bauCards() {
 }
 
 export function fillCostCard(el, label, frame) {
+  const days = label.startsWith('1-') ? 30 : 182;
   el.innerHTML = `
     <div class="cost-title">COST TO FULFILL · ${label}</div>
     <div class="cost-main"><span>${money(frame.cumTotal)}</span></div>
-    <div class="cost-sub">DES-computed · ${COST_COMPONENT_COUNT} components · hover for breakdown</div>`;
+    <div class="cost-sub">AS-IS DES · ${days} DAYS · ${COST_COMPONENT_COUNT} COMPONENTS · HOVER FOR BREAKDOWN</div>`;
 }
 
 export function attachBreakdown(el, label, frame) {

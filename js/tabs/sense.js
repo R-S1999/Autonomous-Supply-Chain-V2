@@ -3,10 +3,10 @@
 // (not forced green), live computed KPIs in the popovers, alerts pinned on
 // their origin nodes, and the 1-MO / 6-MO BAU cost-to-fulfill cards on the
 // right — hover for the full simulated cost breakdown.
-import { renderGraph } from '../graph.js';
-import { ALERTS_BY_ORIGIN } from '../model.js';
-import { runBau } from '../engine.js';
-import { bauCards, fillCostCard, attachBreakdown } from '../costcards.js';
+import { renderGraph } from '../graph.js?v=costledger3';
+import { ALERTS_BY_ORIGIN } from '../model.js?v=costledger';
+import { runBau } from '../engine.js?v=costledger';
+import { bauCards, fillCostCard, attachBreakdown } from '../costcards.js?v=costledger';
 
 export function renderSense(view, ctx) {
   view.innerHTML = `

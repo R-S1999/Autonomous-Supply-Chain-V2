@@ -4,8 +4,8 @@
 import { BAU_GRAPH } from './data.generated.js';
 import {
   COLUMNS, NODE_META, ALERT_META, nodesById, eventsById, columnOf,
-  nodeSubLabel, nodeSource, pretty, fmtKpiValue, expectedShifts, kNum, primaryKpiOf,
-} from './model.js';
+  nodeSubLabel, nodeSource, pretty, fmtKpiValue, expectedShifts, kNum, money, primaryKpiOf,
+} from './model.js?v=costledger';
 
 const VB_W = 1510, VB_H = 880;
 const COL_X = [85, 290, 495, 700, 905, 1110, 1330];
@@ -116,8 +116,15 @@ export function renderGraph(container, opts = {}) {
     const ring = svgEl('circle', { r: p.r, class: 'node-ring' });
     const dot = svgEl('circle', { r: Math.max(3.2, p.r / 4.6), class: 'node-dot' });
     const name = svgEl('text', { y: p.r + 15, class: 'node-name', 'text-anchor': 'middle' });
-    name.textContent = NODE_META[node.id]?.name ?? node.id;
+    const displayName = NODE_META[node.id]?.name ?? node.id;
+    if (node.id === 'plant_longmont_frozen_sandwich') {
+      name.setAttribute('y', p.r + 13);
+      const line1 = svgEl('tspan', { x: 0, dy: 0 }); line1.textContent = 'Longmont';
+      const line2 = svgEl('tspan', { x: 0, dy: 12 }); line2.textContent = 'Uncrustables Plant';
+      name.append(line1, line2);
+    } else name.textContent = displayName;
     const sub = svgEl('text', { y: p.r + 28, class: 'node-sub', 'text-anchor': 'middle' });
+    if (node.id === 'plant_longmont_frozen_sandwich') sub.setAttribute('y', p.r + 42);
     sub.textContent = nodeSubLabel(node);
     /* node-level alert badge (code tag anchored top-right of the ring) */
     const tag = svgEl('g', { class: 'alert-tag hidden' });
@@ -153,7 +160,8 @@ export function renderGraph(container, opts = {}) {
   let hideTimer = null;
   let pinnedNode = null;
   let activeAlerts = {}; // nodeId -> [eventId]
-  let compareMap = null; // nodeId -> metric -> {bau, worst, pct} (worst-in-window vs BAU)
+  let compareMap = null; // nodeId -> metric -> {bau, worst, pct, day} (worst-in-window vs BAU)
+  let nodeCostMap = null; // nodeId -> { cost, total }
 
   function alertSectionHtml(nodeId) {
     const evIds = activeAlerts[nodeId] || [];
@@ -197,6 +205,7 @@ export function renderGraph(container, opts = {}) {
         <span class="chip chip-${health}">${health === 'good' ? 'HEALTHY' : health.toUpperCase()}</span>
       </div>
       ${alertSectionHtml(nodeId)}
+      ${nodeCostSectionHtml(nodeId)}
       ${compareMap?.[nodeId] ? '<div class="pop-cmp-note">HIGHLIGHTED ROWS = WORST IN DISRUPTION WINDOW VS BAU NORMAL</div>' : ''}
       <div class="pop-kpis">
         ${kpis.map(k => {
@@ -207,7 +216,7 @@ export function renderGraph(container, opts = {}) {
               <span class="pop-kpi-val overridden">
                 <s>${fmtKpiValue({ ...k, modeled_value: cmp.bau })}</s> →
                 ${fmtKpiValue({ ...k, modeled_value: cmp.worst })}
-                <em class="cmp-delta">${cmp.pct > 0 ? '+' : ''}${cmp.pct}%</em>
+                <em class="cmp-delta">LOW · DAY ${cmp.day}</em>
               </span>
             </div>`;
           }
@@ -226,8 +235,8 @@ export function renderGraph(container, opts = {}) {
           .map(([mk, cmp]) => `<div class="pop-kpi pop-kpi-cmp">
             <span class="pop-kpi-name">${pretty(mk)}</span>
             <span class="pop-kpi-val overridden">
-              <s>${fmtNum(cmp.bau)}</s> → ${fmtNum(cmp.worst)}
-              <em class="cmp-delta">${cmp.pct > 0 ? '+' : ''}${cmp.pct}%</em>
+              <s>${fmtCompare(cmp.bau, cmp.unit)}</s> → ${fmtCompare(cmp.worst, cmp.unit)}
+              <em class="cmp-delta">LOW · DAY ${cmp.day}</em>
             </span>
           </div>`).join('')}
       </div>
@@ -247,7 +256,27 @@ export function renderGraph(container, opts = {}) {
     top = Math.max(6, Math.min(top, wrapR.height - h - 10));
     pop.style.top = `${top}px`;
   }
-  function fmtNum(v) { return `${Math.round(v * 10) / 10}${v <= 100 ? '%' : ''}`; }
+  function nodeCostSectionHtml(nodeId) {
+    const impact = nodeCostMap?.[nodeId];
+    if (!impact) return '';
+    const share = impact.total ? Math.abs(impact.cost) / Math.abs(impact.total) * 100 : 0;
+    const note = impact.cost < 0 ? 'VARIABLE-COST OFFSET DURING DISRUPTION'
+      : impact.cost === 0 ? 'NO NET INCREMENTAL COST AT THIS NODE'
+      : `${share.toFixed(1)}% OF ${money(impact.total)} NETWORK IMPACT`;
+    return `<div class="pop-node-cost ${impact.cost < 0 ? 'offset' : ''}">
+      <span>30-DAY NODE COST IMPACT</span><b>${nodeImpactMoney(impact.cost)}</b><small>${note}</small>
+    </div>`;
+  }
+  function nodeImpactMoney(v) {
+    const sign = v < 0 ? '-' : v > 0 ? '+' : '';
+    const abs = Math.abs(v);
+    return abs >= 1000 ? `${sign}$${(abs / 1000).toFixed(1)}K` : `${sign}$${abs.toFixed(0)}`;
+  }
+  function fmtCompare(v, unit) {
+    if (unit === 'days') return `${v}d`;
+    if (unit === 'percent') return `${v}%`;
+    return kNum(v);
+  }
   function hidePopover() { pop.classList.add('hidden'); pop.classList.remove('pinned'); }
   function unpin() { pinnedNode = null; hidePopover(); }
 
@@ -309,7 +338,8 @@ export function renderGraph(container, opts = {}) {
         const live = primary ? frame?.valueOverrides?.[id]?.[primary.name] : undefined;
         const sub = g.querySelector('.node-sub');
         if (sub) {
-          if (live == null) sub.textContent = nodeSubLabel(node);
+          if (frame?.nodeSummaryLabels?.[id]) sub.textContent = frame.nodeSummaryLabels[id];
+          else if (live == null) sub.textContent = nodeSubLabel(node);
           else if (primary.unit === 'days') sub.textContent = `${live}d cover`;
           else if (primary.unit === 'percent') sub.textContent = `${live}% fill`;
           else sub.textContent = fmtKpiValue({ ...primary, modeled_value: live });
@@ -399,6 +429,7 @@ export function renderGraph(container, opts = {}) {
     },
     /* worst-in-disruption-window vs BAU-normal comparison shown in popovers */
     setCompare(map) { compareMap = map; if (pinnedNode) showPopover(pinnedNode); },
+    setNodeCosts(map) { nodeCostMap = map; if (pinnedNode) showPopover(pinnedNode); },
     showPopover,
     destroy() { cancelAnimationFrame(raf); container.innerHTML = ''; container.classList.remove('graph-wrap'); },
   };

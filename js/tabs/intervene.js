@@ -1,5 +1,5 @@
-import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js';
-import { runBau, runScenario } from '../engine.js';
+import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js?v=costledger';
+import { runBau, runScenario } from '../engine.js?v=costledger';
 
 export function renderIntervene(view, ctx) {
   const event = EVENTS[0]; const meta = ALERT_META[event.id];

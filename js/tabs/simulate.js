@@ -1,11 +1,51 @@
-import { renderGraph } from '../graph.js';
+import { renderGraph } from '../graph.js?v=costledger3';
 import { TimelinePlayer } from '../sim.js';
-import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, money, pretty } from '../model.js';
-import { runBau, runScenario } from '../engine.js';
+import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, money, pretty, kNum } from '../model.js?v=costledger';
+import { runBau, runScenario } from '../engine.js?v=costledger';
+
+function postRunSummary(bau, run, event) {
+  const affected = event.affected_model_objects?.nodes || [];
+  const severity = { good: 0, amber: 1, red: 2 };
+  const compare = {}, valueOverrides = {}, nodeSummaryLabels = {}, nodeHealth = {};
+  for (const id of affected) {
+    const metrics = new Set(run.frames.flatMap(f => Object.keys(f.valueOverrides?.[id] || {})));
+    for (const metric of metrics) {
+      let low = { value: Infinity, day: 0 };
+      for (const f of run.frames) {
+        const value = f.valueOverrides?.[id]?.[metric];
+        if (Number.isFinite(value) && value < low.value) low = { value, day: f.t + 1 };
+      }
+      if (!Number.isFinite(low.value)) continue;
+      const normal = bau.frames[0].valueOverrides?.[id]?.[metric] ?? low.value;
+      const unit = metric.includes('days_of_cover') ? 'days' : metric.includes('fill_rate_pct') ? 'percent' : 'number';
+      (compare[id] ||= {})[metric] = {
+        bau: normal, worst: low.value, day: low.day, unit,
+        pct: normal ? Math.round((low.value - normal) / Math.abs(normal) * 100) : 0,
+      };
+      (valueOverrides[id] ||= {})[metric] = low.value;
+      if (unit === 'days') nodeSummaryLabels[id] = `${low.value}d low`;
+      else if (unit === 'percent') nodeSummaryLabels[id] = `${low.value}% low`;
+      else if (metric.includes('sandwiches')) nodeSummaryLabels[id] = `${kNum(low.value)} sw/wk low`;
+      else if (metric.includes('output_lb')) nodeSummaryLabels[id] = `${kNum(low.value)} lb/wk low`;
+    }
+    nodeHealth[id] = run.frames.reduce((worst, f) => severity[f.nodeHealth?.[id] || 'good'] > severity[worst] ? f.nodeHealth[id] : worst, 'good');
+  }
+  nodeSummaryLabels.supplier_oils_fats_regional = '5d tanker delay';
+  const edgeStates = {};
+  for (const f of run.frames) for (const [id, state] of Object.entries(f.edgeStates || {})) {
+    if (state === 'disrupted' || !edgeStates[id]) edgeStates[id] = state;
+  }
+  const bau30 = bau.frames[29], total = run.total - bau30.cumTotal;
+  const nodeCosts = Object.fromEntries(affected.map(id => [id, {
+    cost: (run.nodeCosts?.[id] || 0) - (bau30.nodeCosts?.[id] || 0), total,
+  }]));
+  return { compare, nodeCosts, frame: { nodeHealth, edgeStates, valueOverrides, nodeSummaryLabels } };
+}
 
 export function renderSimulate(view, ctx) {
   const event = EVENTS[0], meta = ALERT_META[event.id];
   const bau = runBau(), base = bau.frames[29], run = runScenario(event.id);
+  const postRun = postRunSummary(bau, run, event);
   const interventions = event.candidate_interventions.map(iv => {
     const result = runScenario(event.id, iv.id);
     return { iv, avoided: run.total - result.total, worst: result.worstRetailer };
@@ -32,6 +72,7 @@ export function renderSimulate(view, ctx) {
   const solutionPanel = view.querySelector('#solution-panel'), placeholder = view.querySelector('#solution-placeholder'); let player;
   const play = () => {
     let worstSoFar = { name: '—', fill: 101, day: 0 };
+    graph.setCompare(null); graph.setNodeCosts(null);
     solutionPanel.classList.add('hidden'); solutionPanel.classList.remove('reveal'); placeholder.classList.remove('hidden');
     view.querySelectorAll('[data-solution]').forEach(el => el.classList.remove('ready'));
     player = new TimelinePlayer(run.frames, (f, i) => {
@@ -42,6 +83,8 @@ export function renderSimulate(view, ctx) {
       if (f.lowestRetailer.fill < worstSoFar.fill) worstSoFar = { ...f.lowestRetailer, day: i + 1 };
       lowest.textContent = `${worstSoFar.name} · ${worstSoFar.fill.toFixed(1)}% · DAY ${worstSoFar.day}`;
       if (i === run.frames.length - 1) {
+        graph.setFrame(postRun.frame); graph.setCompare(postRun.compare); graph.setNodeCosts(postRun.nodeCosts);
+        phase.textContent = 'POST-RUN LOWS · CLICK NODES FOR COST'; phase.className = 'phase aftermath';
         view.querySelectorAll('[data-solution]').forEach((el, n) => { el.classList.add('ready'); el.querySelector('.sim-status').textContent = `${money(interventions[n].avoided)} avoided`; });
         placeholder.classList.add('hidden'); solutionPanel.classList.remove('hidden'); solutionPanel.classList.add('reveal');
       }
