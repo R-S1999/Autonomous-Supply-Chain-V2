@@ -1,4 +1,4 @@
-import { renderGraph } from '../graph.js';
+import { renderGraph } from '../graph.js?v=nodeagentcards2';
 import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js';
 import { runBau, runScenario } from '../engine.js';
 
@@ -106,38 +106,49 @@ export function renderAct(view, ctx) {
   const currentIntervention = () => event.candidate_interventions.find(iv => iv.id === select.value);
 
   function renderSteps(steps) {
-    line.innerHTML = steps.map((s, i) => `<div class="agent-step" data-i="${i}"><i></i><div><b>${s[1]} · ${NODE_META[s[0]]?.name || s[0]}</b><span>${s[2]}</span></div></div>`).join('');
+    line.innerHTML = steps.map((s, i) => `<div class="agent-step" data-i="${i}"><i></i><div><b>${s[1]} · ${NODE_META[s[0]]?.name || s[0]}</b><span>WAITING FOR AGENT</span></div></div>`).join('');
     graph.highlightAlert(event, meta.origins, INTERVENTION_NODES[select.value]); dot.style.top = '8px';
   }
-  function animate(steps) {
-    btn.disabled = true; btn.textContent = 'WORKFLOW RUNNING';
+  function animate(steps, generatedByOpenAI) {
+    btn.disabled = true; btn.textContent = 'AGENT EXECUTING'; graph.clearAgentAction();
     steps.forEach((s, i) => timers.push(setTimeout(() => {
-      const el = line.querySelector(`[data-i="${i}"]`); el.classList.add('active');
+      const el = line.querySelector(`[data-i="${i}"]`), status = el.querySelector('span');
+      el.classList.add('active'); status.textContent = 'PROCESSING ENTERPRISE ACTION';
       if (i) line.querySelector(`[data-i="${i - 1}"]`)?.classList.replace('active', 'done');
-      dot.style.top = `${i * (100 / Math.max(1, steps.length - 1))}%`; graph.pulseNode(s[0]); graph.setAgentBadge(s[0]);
-      update.innerHTML = `<b>${s[1]} CONNECTED</b><span>${s[2]}</span>`;
+      dot.style.top = `${i * (100 / Math.max(1, steps.length - 1))}%`;
+      graph.setAgentBadge(s[0]); graph.pulseNode(s[0]); graph.showAgentAction(s[0], s[1], '', 'processing');
+      update.innerHTML = `<b>AGENT RUNNING · ${s[1]}</b><span>Processing the action at ${NODE_META[s[0]]?.name || s[0]}…</span>`;
+
+      timers.push(setTimeout(() => {
+        const actionSource = generatedByOpenAI ? 'OPENAI' : 'FALLBACK';
+        status.textContent = `${actionSource} ACTION EXECUTED`;
+        graph.showAgentAction(s[0], s[1], s[2], 'revealed', actionSource);
+        update.innerHTML = `<b>${s[1]} ACTION EXECUTED</b><span>The generated update is now displayed beside ${NODE_META[s[0]]?.name || s[0]}.</span>`;
+      }, 540));
+
       if (i === steps.length - 1) timers.push(setTimeout(() => {
         el.classList.replace('active', 'done'); update.innerHTML = '<b>WORKFLOW COMPLETE</b><span>The selected intervention is committed and retailer fulfillment monitoring remains active.</span>'; btn.disabled = false; btn.textContent = 'REGENERATE & RUN ↻';
-      }, 700));
-    }, i * 950)));
+      }, 1250));
+    }, i * 1400)));
   }
   async function generateAndRun() {
-    const token = ++generation; aborter?.abort(); aborter = new AbortController(); clearTimers();
+    const token = ++generation; aborter?.abort(); aborter = new AbortController(); clearTimers(); graph.clearAgentAction();
     const intervention = currentIntervention(), blueprint = STEP_BLUEPRINTS[intervention.id];
     view.querySelector('#act-desc').textContent = INTERVENTION_PROPOSALS[intervention.id];
     source.textContent = 'OPENAI · GENERATING ENTERPRISE MESSAGES'; source.className = 'agent-source generating';
     update.innerHTML = '<b>GENERATING WORKFLOW</b><span>Creating enterprise-system messages for the selected intervention…</span>';
     btn.disabled = true; btn.textContent = 'PREPARING WORKFLOW'; renderSteps(blueprint);
-    let steps = blueprint;
+    let steps = blueprint, generatedByOpenAI = false;
     try {
       steps = await generateMessages(event, intervention, blueprint, aborter.signal);
       if (token !== generation) return;
+      generatedByOpenAI = true;
       source.textContent = 'OPENAI · GENERATED WORKFLOW'; source.className = 'agent-source generated';
     } catch (error) {
       if (aborter.signal.aborted || token !== generation) return;
       source.textContent = 'SCRIPTED FALLBACK · OPENAI UNAVAILABLE'; source.className = 'agent-source fallback';
     }
-    renderSteps(steps); update.innerHTML = '<b>WORKFLOW READY</b><span>Enterprise connections validated. Beginning execution.</span>'; animate(steps);
+    renderSteps(steps); update.innerHTML = '<b>WORKFLOW READY</b><span>Enterprise connections validated. Beginning execution.</span>'; animate(steps, generatedByOpenAI);
   }
   select.addEventListener('change', generateAndRun); btn.addEventListener('click', generateAndRun); timers.push(setTimeout(generateAndRun, 350));
   return () => { generation += 1; aborter?.abort(); clearTimers(); graph.destroy(); };

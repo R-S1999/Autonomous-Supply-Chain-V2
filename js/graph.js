@@ -142,6 +142,13 @@ export function renderGraph(container, opts = {}) {
   const pop = document.createElement('div');
   pop.className = 'kpi-pop hidden';
   container.appendChild(pop);
+  const agentActionCard = document.createElement('div');
+  agentActionCard.className = 'node-agent-card hidden';
+  agentActionCard.innerHTML = `
+    <div class="node-agent-head"><span class="node-agent-spinner"></span><b></b></div>
+    <strong></strong>
+    <p></p>`;
+  container.appendChild(agentActionCard);
   let currentFrame = null;
   let hideTimer = null;
   let pinnedNode = null;
@@ -357,6 +364,32 @@ export function renderGraph(container, opts = {}) {
       agentBadge.setAttribute('transform', `translate(${p.x} ${p.y - p.r - 44})`);
       agentBadge.classList.remove('hidden');
     },
+    showAgentAction(nodeId, system, message = '', phase = 'processing', source = 'OPENAI') {
+      const ring = nodeEls[nodeId]?.querySelector('.node-ring');
+      if (!ring) return;
+      const nodeName = NODE_META[nodeId]?.name || nodeId;
+      agentActionCard.className = `node-agent-card ${phase}`;
+      agentActionCard.querySelector('.node-agent-head b').textContent = phase === 'processing'
+        ? `AGENT RUNNING · ${system}` : `${source} ACTION · ${system}`;
+      agentActionCard.querySelector('strong').textContent = nodeName;
+      agentActionCard.querySelector('p').textContent = phase === 'processing'
+        ? `Connecting to ${system} and processing the next enterprise action…` : message;
+
+      const wrapR = container.getBoundingClientRect(), nodeR = ring.getBoundingClientRect();
+      const cardW = Math.min(270, wrapR.width - 24);
+      let left = nodeR.right - wrapR.left + 18, side = 'right';
+      if (left + cardW > wrapR.width - 10) {
+        left = nodeR.left - wrapR.left - cardW - 18;
+        side = 'left';
+      }
+      agentActionCard.style.width = `${cardW}px`;
+      agentActionCard.style.left = `${Math.max(10, left)}px`;
+      agentActionCard.style.top = '0px';
+      const top = Math.max(10, Math.min(nodeR.top - wrapR.top - 22, wrapR.height - agentActionCard.offsetHeight - 10));
+      agentActionCard.style.top = `${top}px`;
+      agentActionCard.dataset.side = side;
+    },
+    clearAgentAction() { agentActionCard.className = 'node-agent-card hidden'; },
     pulseNode(nodeId) {
       const g = nodeEls[nodeId];
       if (!g) return;
