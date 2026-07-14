@@ -13,7 +13,7 @@ The active model retains the complete upstream ingredient network: flour, peanut
 | **Sense** | Shows the focused chain, its live BAU state, and the single inbound-delay alert. |
 | **Simulate** | Runs a deterministic 30-day inventory and production simulation for one delayed oils-and-fats tanker, calculating downtime, retailer shortages, OTIF penalties and lost margin. |
 | **Decide** | Compares execution cost, avoided cost, ROI, and store service recovery for each solution. |
-| **Act** | Uses OpenAI to generate intervention-specific enterprise-system updates, then runs the selected response as a connected BPM-style workflow. |
+| **Act** | Uses an AI Agent to generate intervention-specific enterprise-system updates, then runs the selected response as a connected BPM-style workflow. |
 
 Retail impact includes distinct Costco, Sam's Club and Other Retailers fulfillment, OTIF penalties and lost margin.
 

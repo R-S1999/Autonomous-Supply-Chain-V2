@@ -1,8 +1,8 @@
-import { renderGraph } from '../graph.js?v=costledger3';
+import { renderGraph } from '../graph.js?v=agentnaming';
 import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_AGENT_STEPS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js?v=decidesteps';
 import { runBau, runScenario } from '../engine.js?v=costledger';
 
-// Enterprise-system and node routing is deterministic. OpenAI generates the
+// Enterprise-system and node routing is deterministic. The AI agent generates the
 // concise user-facing action message for every routed step, which keeps the
 // workflow safe, relevant to the selected intervention and visually stable.
 function economics(event, interventionId) {
@@ -65,7 +65,7 @@ async function generateMessages(event, intervention, blueprint, signal) {
 
 export function renderAct(view, ctx) {
   const event = EVENTS[0], meta = ALERT_META[event.id], initial = ctx.state.selectedInterventionId || event.recommended_intervention_id;
-  view.innerHTML = `<div class="act-workspace"><section class="act-main"><div class="scenario-titlebar act-title"><span class="live-dot"></span><b>ACT · ${meta.title}</b><i>Network state remains visible while the agent executes</i></div><div class="workspace-graph" id="act-graph"></div></section><aside class="agent-rail"><div class="agent-head"><span class="section-kicker">ACT · LIVE WORKFLOW</span><h2>Intervention agent</h2><label>DECIDED INTERVENTION</label><select id="act-iv">${event.candidate_interventions.map(iv => `<option value="${iv.id}" ${iv.id === initial ? 'selected' : ''}>${pretty(iv.id)}</option>`).join('')}</select><p id="act-desc"></p><div class="agent-source" id="agent-source">OPENAI · PREPARING WORKFLOW</div></div><div class="agent-progress"><div class="progress-line"><i id="moving-dot"></i></div><div class="agent-steps" id="bpm-line"></div></div><div class="agent-update" id="bpm-update"><b>GENERATING WORKFLOW</b><span>Building intervention-specific enterprise messages…</span></div><button class="rail-cta" id="deploy" disabled>PREPARING WORKFLOW</button></aside></div>`;
+  view.innerHTML = `<div class="act-workspace"><section class="act-main"><div class="scenario-titlebar act-title"><span class="live-dot"></span><b>ACT · ${meta.title}</b><i>Network state remains visible while the agent executes</i></div><div class="workspace-graph" id="act-graph"></div></section><aside class="agent-rail"><div class="agent-head"><span class="section-kicker">ACT · LIVE WORKFLOW</span><h2>AI Agent</h2><label>DECIDED INTERVENTION</label><select id="act-iv">${event.candidate_interventions.map(iv => `<option value="${iv.id}" ${iv.id === initial ? 'selected' : ''}>${pretty(iv.id)}</option>`).join('')}</select><p id="act-desc"></p><div class="agent-source" id="agent-source">AI AGENT · PREPARING WORKFLOW</div></div><div class="agent-progress"><div class="progress-line"><i id="moving-dot"></i></div><div class="agent-steps" id="bpm-line"></div></div><div class="agent-update" id="bpm-update"><b>GENERATING WORKFLOW</b><span>Building intervention-specific enterprise messages…</span></div><button class="rail-cta" id="deploy" disabled>PREPARING WORKFLOW</button></aside></div>`;
   const graph = renderGraph(view.querySelector('#act-graph')); graph.setAlerts(Object.fromEntries(meta.origins.map(id => [id, [event.id]])));
   const select = view.querySelector('#act-iv'), line = view.querySelector('#bpm-line'), update = view.querySelector('#bpm-update'), btn = view.querySelector('#deploy'), dot = view.querySelector('#moving-dot'), source = view.querySelector('#agent-source');
   let timers = [], aborter = null, generation = 0;
@@ -76,7 +76,7 @@ export function renderAct(view, ctx) {
     line.innerHTML = steps.map((s, i) => `<div class="agent-step" data-i="${i}"><i></i><div><b>${s[1]} · ${NODE_META[s[0]]?.name || s[0]}</b><span>WAITING FOR AGENT</span></div></div>`).join('');
     graph.highlightAlert(event, meta.origins, INTERVENTION_NODES[select.value]); dot.style.top = '8px';
   }
-  function animate(steps, generatedByOpenAI) {
+  function animate(steps, generatedByAgent) {
     btn.disabled = true; btn.textContent = 'AGENT EXECUTING'; graph.clearAgentAction();
     steps.forEach((s, i) => timers.push(setTimeout(() => {
       const el = line.querySelector(`[data-i="${i}"]`), status = el.querySelector('span');
@@ -87,7 +87,7 @@ export function renderAct(view, ctx) {
       update.innerHTML = `<b>AGENT RUNNING · ${s[1]}</b><span>Processing the action at ${NODE_META[s[0]]?.name || s[0]}…</span>`;
 
       timers.push(setTimeout(() => {
-        const actionSource = generatedByOpenAI ? 'OPENAI' : 'FALLBACK';
+        const actionSource = generatedByAgent ? 'AI AGENT' : 'FALLBACK';
         status.textContent = `${actionSource} ACTION EXECUTED`;
         graph.showAgentAction(s[0], s[1], s[2], 'revealed', actionSource);
         update.innerHTML = `<b>${s[1]} ACTION EXECUTED</b><span>The generated update is now displayed beside ${NODE_META[s[0]]?.name || s[0]}.</span>`;
@@ -102,20 +102,20 @@ export function renderAct(view, ctx) {
     const token = ++generation; aborter?.abort(); aborter = new AbortController(); clearTimers(); graph.clearAgentAction();
     const intervention = currentIntervention(), blueprint = INTERVENTION_AGENT_STEPS[intervention.id];
     view.querySelector('#act-desc').textContent = INTERVENTION_PROPOSALS[intervention.id];
-    source.textContent = 'OPENAI · GENERATING ENTERPRISE MESSAGES'; source.className = 'agent-source generating';
+    source.textContent = 'AI AGENT · GENERATING ENTERPRISE MESSAGES'; source.className = 'agent-source generating';
     update.innerHTML = '<b>GENERATING WORKFLOW</b><span>Creating enterprise-system messages for the selected intervention…</span>';
     btn.disabled = true; btn.textContent = 'PREPARING WORKFLOW'; renderSteps(blueprint);
-    let steps = blueprint, generatedByOpenAI = false;
+    let steps = blueprint, generatedByAgent = false;
     try {
       steps = await generateMessages(event, intervention, blueprint, aborter.signal);
       if (token !== generation) return;
-      generatedByOpenAI = true;
-      source.textContent = 'OPENAI · GENERATED WORKFLOW'; source.className = 'agent-source generated';
+      generatedByAgent = true;
+      source.textContent = 'AI AGENT · GENERATED WORKFLOW'; source.className = 'agent-source generated';
     } catch (error) {
       if (aborter.signal.aborted || token !== generation) return;
-      source.textContent = 'SCRIPTED FALLBACK · OPENAI UNAVAILABLE'; source.className = 'agent-source fallback';
+      source.textContent = 'SCRIPTED FALLBACK · AI AGENT UNAVAILABLE'; source.className = 'agent-source fallback';
     }
-    renderSteps(steps); update.innerHTML = '<b>WORKFLOW READY</b><span>Enterprise connections validated. Beginning execution.</span>'; animate(steps, generatedByOpenAI);
+    renderSteps(steps); update.innerHTML = '<b>WORKFLOW READY</b><span>Enterprise connections validated. Beginning execution.</span>'; animate(steps, generatedByAgent);
   }
   select.addEventListener('change', generateAndRun); btn.addEventListener('click', generateAndRun); timers.push(setTimeout(generateAndRun, 350));
   return () => { generation += 1; aborter?.abort(); clearTimers(); graph.destroy(); };

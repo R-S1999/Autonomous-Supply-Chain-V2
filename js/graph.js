@@ -394,7 +394,7 @@ export function renderGraph(container, opts = {}) {
       agentBadge.setAttribute('transform', `translate(${p.x} ${p.y - p.r - 44})`);
       agentBadge.classList.remove('hidden');
     },
-    showAgentAction(nodeId, system, message = '', phase = 'processing', source = 'OPENAI') {
+    showAgentAction(nodeId, system, message = '', phase = 'processing', source = 'AI AGENT') {
       const ring = nodeEls[nodeId]?.querySelector('.node-ring');
       if (!ring) return;
       const nodeName = NODE_META[nodeId]?.name || nodeId;
