@@ -2,6 +2,10 @@ import { renderGraph } from '../graph.js?v=agentnaming';
 import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_AGENT_STEPS, INTERVENTION_NODES, NODE_META, money, pretty } from '../model.js?v=decidesteps';
 import { runBau, runScenario } from '../engine.js?v=costledger';
 
+const STEP_INTERVAL_MS = 2800;
+const PROCESSING_MS = 850;
+const FINAL_STEP_HOLD_MS = 2500;
+
 // Enterprise-system and node routing is deterministic. The AI agent generates the
 // concise user-facing action message for every routed step, which keeps the
 // workflow safe, relevant to the selected intervention and visually stable.
@@ -91,12 +95,12 @@ export function renderAct(view, ctx) {
         status.textContent = `${actionSource} ACTION EXECUTED`;
         graph.showAgentAction(s[0], s[1], s[2], 'revealed', actionSource);
         update.innerHTML = `<b>${s[1]} ACTION EXECUTED</b><span>The generated update is now displayed beside ${NODE_META[s[0]]?.name || s[0]}.</span>`;
-      }, 540));
+      }, PROCESSING_MS));
 
       if (i === steps.length - 1) timers.push(setTimeout(() => {
         el.classList.replace('active', 'done'); update.innerHTML = '<b>WORKFLOW COMPLETE</b><span>The selected intervention is committed and retailer fulfillment monitoring remains active.</span>'; btn.disabled = false; btn.textContent = 'REGENERATE & RUN ↻';
-      }, 1250));
-    }, i * 1400)));
+      }, FINAL_STEP_HOLD_MS));
+    }, i * STEP_INTERVAL_MS)));
   }
   async function generateAndRun() {
     const token = ++generation; aborter?.abort(); aborter = new AbortController(); clearTimers(); graph.clearAgentAction();

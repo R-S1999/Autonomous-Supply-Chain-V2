@@ -3,7 +3,7 @@
 import { renderSense } from './tabs/sense.js?v=costledger3';
 import { renderSimulate } from './tabs/simulate.js?v=cardlayout';
 import { renderIntervene } from './tabs/intervene.js?v=cardlayout';
-import { renderAct } from './tabs/act.js?v=agentnaming';
+import { renderAct } from './tabs/act.js?v=sloweract';
 import { EVENTS } from './model.js?v=costledger';
 
 const view = document.getElementById('view');
