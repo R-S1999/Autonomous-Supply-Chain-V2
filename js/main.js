@@ -1,16 +1,16 @@
 // App shell: tab routing. Cost cards live inside the Sense/Simulate screens
 // (right rail), computed by the DES engine.
-import { renderSense } from './tabs/sense.js?v=costledger3';
-import { renderSimulate } from './tabs/simulate.js?v=cardlayout';
-import { renderIntervene } from './tabs/intervene.js?v=cardlayout';
-import { renderAct } from './tabs/act.js?v=sloweract';
-import { EVENTS } from './model.js?v=costledger';
+import { renderSense } from './tabs/sense.js?v=experience5';
+import { renderSimulate } from './tabs/simulate.js?v=experience5';
+import { renderIntervene } from './tabs/intervene.js?v=experience5';
+import { renderAct } from './tabs/act.js?v=experience5';
+import { EVENTS } from './model.js?v=experience5';
 
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 document.getElementById('alerts-count').textContent = EVENTS.length;
 
-const state = { selectedEventId: null, selectedInterventionId: null };
+const state = { selectedEventId: null, selectedInterventionId: null, senseAlertsVisible: false };
 let destroyCurrent = null;
 let activeTab = null;
 
@@ -36,9 +36,14 @@ function switchTab(name) {
 
 tabbar.addEventListener('click', (e) => {
   const b = e.target.closest('.tab');
-  if (b && b.dataset.tab !== activeTab) switchTab(b.dataset.tab);
+  if (!b) return;
+  if (b.dataset.tab === 'sense') state.senseAlertsVisible = true;
+  if (b.dataset.tab !== activeTab || b.dataset.tab === 'sense') switchTab(b.dataset.tab);
 });
-document.getElementById('alerts-pill').addEventListener('click', () => switchTab('sense'));
+document.getElementById('alerts-pill').addEventListener('click', () => {
+  state.senseAlertsVisible = true;
+  switchTab('sense');
+});
 
 /* deep-linking / verification: ?tab=simulate&event=TAC_001_...&pop=node_id&deploy=1 */
 const params = new URLSearchParams(location.search);

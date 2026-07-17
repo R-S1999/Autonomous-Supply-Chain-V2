@@ -1,102 +1,135 @@
-import { renderGraph } from '../graph.js?v=cardlayout';
+import { renderGraph } from '../graph.js?v=experience5';
 import { TimelinePlayer } from '../sim.js';
-import { EVENTS, ALERT_META, INTERVENTION_PROPOSALS, money, pretty, kNum } from '../model.js?v=costledger';
-import { runBau, runScenario } from '../engine.js?v=autocostcards';
-
-function postRunSummary(bau, run, event) {
-  const affected = event.affected_model_objects?.nodes || [];
-  const severity = { good: 0, amber: 1, red: 2 };
-  const compare = {}, valueOverrides = {}, nodeSummaryLabels = {}, nodeHealth = {};
-  for (const id of affected) {
-    const metrics = new Set(run.frames.flatMap(f => Object.keys(f.valueOverrides?.[id] || {})));
-    for (const metric of metrics) {
-      let low = { value: Infinity, day: 0 };
-      for (const f of run.frames) {
-        const value = f.valueOverrides?.[id]?.[metric];
-        if (Number.isFinite(value) && value < low.value) low = { value, day: f.t + 1 };
-      }
-      if (!Number.isFinite(low.value)) continue;
-      const normal = bau.frames[0].valueOverrides?.[id]?.[metric] ?? low.value;
-      const unit = metric.includes('days_of_cover') ? 'days' : metric.includes('fill_rate_pct') ? 'percent' : 'number';
-      (compare[id] ||= {})[metric] = {
-        bau: normal, worst: low.value, day: low.day, unit,
-        pct: normal ? Math.round((low.value - normal) / Math.abs(normal) * 100) : 0,
-      };
-      (valueOverrides[id] ||= {})[metric] = low.value;
-      if (unit === 'days') nodeSummaryLabels[id] = `${low.value}d low`;
-      else if (unit === 'percent') nodeSummaryLabels[id] = `${low.value}% low`;
-      else if (metric.includes('sandwiches')) nodeSummaryLabels[id] = `${kNum(low.value)} sw/wk low`;
-      else if (metric.includes('output_lb')) nodeSummaryLabels[id] = `${kNum(low.value)} lb/wk low`;
-    }
-    nodeHealth[id] = run.frames.reduce((worst, f) => severity[f.nodeHealth?.[id] || 'good'] > severity[worst] ? f.nodeHealth[id] : worst, 'good');
-  }
-  nodeSummaryLabels.supplier_oils_fats_regional = '5d tanker delay';
-  const edgeStates = {};
-  for (const f of run.frames) for (const [id, state] of Object.entries(f.edgeStates || {})) {
-    if (state === 'disrupted' || !edgeStates[id]) edgeStates[id] = state;
-  }
-  const bau30 = bau.frames[29], total = run.total - bau30.cumTotal;
-  const nodeCosts = Object.fromEntries(affected.map(id => {
-    const scenarioComponents = run.nodeCostComponents?.[id] || {};
-    const bauComponents = bau30.nodeCostComponents?.[id] || {};
-    const buckets = new Set([...Object.keys(scenarioComponents), ...Object.keys(bauComponents)]);
-    const components = [...buckets].map(key => ({
-      key, value: (scenarioComponents[key] || 0) - (bauComponents[key] || 0),
-    })).filter(x => Math.abs(x.value) >= .5).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-    return [id, { cost: (run.nodeCosts?.[id] || 0) - (bau30.nodeCosts?.[id] || 0), total, components }];
-  }));
-  return { compare, nodeCosts, frame: { nodeHealth, edgeStates, valueOverrides, nodeSummaryLabels } };
-}
+import {
+  EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_TITLES, money,
+} from '../model.js?v=experience5';
+import { runBau, runScenario } from '../engine.js?v=costledger';
+import { disruptionSummary, recoverySummary } from '../scenario.js?v=experience5';
 
 export function renderSimulate(view, ctx) {
-  const event = EVENTS[0], meta = ALERT_META[event.id];
-  const bau = runBau(), base = bau.frames[29], run = runScenario(event.id);
-  const postRun = postRunSummary(bau, run, event);
-  const interventions = event.candidate_interventions.map(iv => {
-    const result = runScenario(event.id, iv.id);
-    return { iv, avoided: run.total - result.total, worst: result.worstRetailer };
+  const event = EVENTS[0];
+  const meta = ALERT_META[event.id];
+  const bau = runBau();
+  const noAction = runScenario(event.id);
+  const disruption = disruptionSummary(bau, noAction, event);
+  const noActionLoss = noAction.cum.lost_margin_cost - bau.frames[29].cum.lost_margin_cost;
+  const options = event.candidate_interventions.map(intervention => {
+    const run = runScenario(event.id, intervention.id);
+    const summary = recoverySummary(noAction, run, event);
+    const loss = run.cum.lost_margin_cost - bau.frames[29].cum.lost_margin_cost;
+    return {
+      intervention,
+      run,
+      summary,
+      recovery: Math.max(0, 1 - loss / noActionLoss),
+    };
   });
-  ctx.state.selectedEventId = event.id;
-  view.innerHTML = `<div class="sim-workspace"><section class="sim-main">
-    <div class="scenario-titlebar"><span class="alert-dot"></span><b>SIMULATE · ${meta.title}</b><i>Actual daily inventory, production and retailer fulfillment</i></div>
-    <div class="workspace-graph" id="sim-canvas"></div>
-    <div class="workspace-clock"><span class="mode">30-DAY DISCRETE-EVENT RUN</span><span class="day" id="sc-day">DAY 1 / 30</span><span class="phase pre" id="sc-phase">PRE-EVENT</span><button id="sc-restart">REPLAY</button></div>
-  </section><aside class="economics-rail">
-    <div class="rail-kicker">LIVE SCENARIO ECONOMICS</div>
-    <div class="live-cost compact-cost"><span>COST OF DOING NOTHING</span><strong id="impact">$0</strong><i>vs 30-day BAU</i><div class="cost-meter"><b id="cost-meter"></b></div><p>Simulated downtime, retailer OTIF penalties and lost margin.</p><div class="lowest-fill"><span>LOWEST RETAILER FULFILLMENT</span><b id="lowest-fill">—</b></div></div>
-    <div class="solution-placeholder" id="solution-placeholder"><div class="waiting-pulse"><i></i><i></i><i></i></div><b>SIMULATION IN PROGRESS</b><span>Alternative responses will appear after the 30-day run completes.</span></div>
-    <div class="solution-panel hidden" id="solution-panel"><div class="rail-section-head"><span>SIMULATED INTERVENTIONS</span><b>3 OPTIONS</b></div><div class="rail-solutions">
-      ${interventions.map((x, i) => `<article class="rail-solution" data-solution><div class="solution-index">0${i + 1}</div><div class="solution-body"><h3>${pretty(x.iv.id)}</h3><p>${INTERVENTION_PROPOSALS[x.iv.id]}</p><div class="solution-result"><span class="sim-status">SIMULATED</span><b>worst fill ${Math.round(x.worst.fill)}%</b></div></div></article>`).join('')}
-    </div><button class="rail-cta" id="to-decide">COMPARE ROI IN DECIDE ▸</button></div>
-  </aside></div>`;
 
-  const graph = renderGraph(view.querySelector('#sim-canvas'));
-  graph.setAlerts(Object.fromEntries(meta.origins.map(id => [id, [event.id]]))); graph.highlightAlert(event, meta.origins);
-  const finalImpact = run.total - base.cumTotal;
-  const impactEl = view.querySelector('#impact'), meter = view.querySelector('#cost-meter'), lowest = view.querySelector('#lowest-fill');
-  const day = view.querySelector('#sc-day'), phase = view.querySelector('#sc-phase'), cta = view.querySelector('#to-decide');
-  const solutionPanel = view.querySelector('#solution-panel'), placeholder = view.querySelector('#solution-placeholder'); let player;
-  const play = () => {
-    let worstSoFar = { name: '—', fill: 101, day: 0 };
-    graph.setCompare(null); graph.setNodeCosts(null); graph.clearNodeCostCards();
-    solutionPanel.classList.add('hidden'); solutionPanel.classList.remove('reveal'); placeholder.classList.remove('hidden');
-    view.querySelectorAll('[data-solution]').forEach(el => el.classList.remove('ready'));
-    player = new TimelinePlayer(run.frames, (f, i) => {
-      graph.setFrame(f); day.textContent = `${f.label} / 30`;
-      phase.textContent = f.phase === 'pre' ? 'PRE-EVENT' : f.phase === 'active' ? 'DISRUPTION PROPAGATING' : 'RECOVERY'; phase.className = `phase ${f.phase}`;
-      const current = Math.max(0, f.cumTotal - bau.frames[i].cumTotal);
-      impactEl.textContent = money(current, { plus: true }); meter.style.width = `${Math.min(100, current / finalImpact * 100)}%`;
-      if (f.lowestRetailer.fill < worstSoFar.fill) worstSoFar = { ...f.lowestRetailer, day: i + 1 };
-      lowest.textContent = `${worstSoFar.name} · ${worstSoFar.fill.toFixed(1)}% · DAY ${worstSoFar.day}`;
-      if (i === run.frames.length - 1) {
-        graph.setFrame(postRun.frame); graph.setCompare(postRun.compare); graph.setNodeCosts(postRun.nodeCosts); graph.showNodeCostCards(postRun.nodeCosts);
-        phase.textContent = 'POST-RUN COSTS · NODE COMPONENTS DISPLAYED'; phase.className = 'phase aftermath';
-        view.querySelectorAll('[data-solution]').forEach((el, n) => { el.classList.add('ready'); el.querySelector('.sim-status').textContent = `${money(interventions[n].avoided)} avoided`; });
-        placeholder.classList.add('hidden'); solutionPanel.classList.remove('hidden'); solutionPanel.classList.add('reveal');
+  ctx.state.selectedEventId = event.id;
+  view.innerHTML = `
+    <div class="sim-workspace recovery-workspace">
+      <section class="sim-main">
+        <div class="scenario-titlebar">
+          <span class="live-dot"></span>
+          <b>SIMULATE · RESPONSE OPTIONS</b>
+          <i>Choose a response to simulate its node-by-node recovery</i>
+        </div>
+        <div class="workspace-graph" id="sim-canvas"></div>
+        <div class="workspace-clock">
+          <span class="mode" id="sim-mode">DISRUPTED NETWORK BASELINE</span>
+          <span class="day" id="sc-day">SELECT AN OPTION</span>
+          <span class="phase active" id="sc-phase">IMPACT CONFIRMED</span>
+          <button id="sc-restart" disabled>RUN AGAIN</button>
+        </div>
+      </section>
+      <aside class="recovery-rail">
+        <div class="recovery-head">
+          <span>SIMULATED RESPONSES</span>
+          <h1>Choose a recovery option</h1>
+          <p>Each option reruns the same 30-day disruption with a different scheduled response.</p>
+        </div>
+        <div class="recovery-options">
+          ${options.map((option, index) => `
+            <button class="recovery-option" data-option="${option.intervention.id}">
+              <span class="recovery-index">0${index + 1}</span>
+              <div>
+                <h2>${INTERVENTION_TITLES[option.intervention.id]}</h2>
+                <p>${INTERVENTION_PROPOSALS[option.intervention.id]}</p>
+                <div class="recovery-metrics">
+                  <span><b>${money(option.summary.avoided)}</b> cost avoided</span>
+                  <span><b>${Math.round(option.recovery * 100)}%</b> service recovery</span>
+                </div>
+              </div>
+            </button>`).join('')}
+        </div>
+        <div class="recovery-outcome" id="recovery-outcome">
+          <span>SELECT AN OPTION</span>
+          <b>Run a response simulation</b>
+          <p>The affected nodes will improve as inventory and retailer service recover.</p>
+        </div>
+        <button class="rail-cta" id="to-decide" disabled>REVIEW ROI IN DECIDE</button>
+      </aside>
+    </div>`;
+
+  const graph = renderGraph(view.querySelector('#sim-canvas'), {
+    changedMetricsOnly: true,
+    compareNote: 'DISRUPTED LOW → RECOVERED KPI',
+  });
+  graph.setFrame(disruption.frame);
+  graph.setCompare(disruption.compare);
+
+  const day = view.querySelector('#sc-day');
+  const phase = view.querySelector('#sc-phase');
+  const mode = view.querySelector('#sim-mode');
+  const restart = view.querySelector('#sc-restart');
+  const decide = view.querySelector('#to-decide');
+  const outcome = view.querySelector('#recovery-outcome');
+  let selected = null;
+  let player = null;
+
+  const play = option => {
+    selected = option;
+    ctx.state.selectedInterventionId = option.intervention.id;
+    player?.destroy();
+    graph.setCompare(null);
+    graph.setNodeCosts(null);
+    graph.clearNodeCostCards();
+    view.querySelectorAll('[data-option]').forEach(card => card.classList.toggle('selected', card.dataset.option === option.intervention.id));
+    restart.disabled = true;
+    decide.disabled = true;
+    mode.textContent = INTERVENTION_TITLES[option.intervention.id].toUpperCase();
+    outcome.innerHTML = '<span>SIMULATION RUNNING</span><b>Applying the scheduled response</b><p>Recalculating inventory, production, shipments, penalties and lost sales at every node.</p>';
+
+    player = new TimelinePlayer(option.run.frames, (frame, index) => {
+      graph.setFrame(frame);
+      day.textContent = `DAY ${index + 1} / 30`;
+      phase.textContent = frame.phase === 'pre' ? 'SCHEDULED'
+        : frame.phase === 'active' ? 'RESPONSE ACTIVE'
+          : frame.phase === 'recovered' ? 'RECOVERED' : 'RECOVERING';
+      phase.className = `phase ${frame.phase}`;
+      if (index === option.run.frames.length - 1) {
+        graph.setFrame(option.summary.frame);
+        graph.setCompare(option.summary.compare);
+        graph.setNodeCosts(option.summary.nodeCosts);
+        graph.showNodeCostCards(option.summary.nodeCosts);
+        day.textContent = 'DAY 30 / 30';
+        phase.textContent = 'RECOVERY CONFIRMED';
+        phase.className = 'phase recovered';
+        outcome.innerHTML = `<span>SIMULATED OUTCOME</span><b>${money(option.summary.avoided)} disruption cost avoided</b><p>${Math.round(option.recovery * 100)}% of retailer service loss recovered. Green cards show the cost reduction at each node.</p>`;
+        restart.disabled = false;
+        decide.disabled = false;
       }
-    }, { msPerTick: 150 }); player.play();
+    }, { msPerTick: 220 });
+    player.play();
   };
-  view.querySelector('#sc-restart').addEventListener('click', () => { player.destroy(); play(); });
-  cta.addEventListener('click', () => ctx.gotoTab('intervene', { eventId: event.id })); play();
+
+  view.querySelectorAll('[data-option]').forEach(button => {
+    button.addEventListener('click', () => play(options.find(option => option.intervention.id === button.dataset.option)));
+  });
+  restart.addEventListener('click', () => selected && play(selected));
+  decide.addEventListener('click', () => selected && ctx.gotoTab('intervene', {
+    eventId: event.id,
+    interventionId: selected.intervention.id,
+  }));
   return () => { player?.destroy(); graph.destroy(); };
 }

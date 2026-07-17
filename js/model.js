@@ -5,34 +5,34 @@ import { BAU_GRAPH, ALERT_OVERLAY, DECISION_LAYER } from './data.generated.js';
 /* Column layout (tiers)                                               */
 /* ------------------------------------------------------------------ */
 export const COLUMNS = [
-  { key: 'suppliers',    title: 'SUPPLIERS',     layers: ['raw_material_supplier', 'packaging_supplier'] },
-  { key: 'rm_inventory', title: 'RM INVENTORY',  layers: ['raw_material_inventory', 'packaging_inventory'] },
-  { key: 'processing',   title: 'PROCESSING',    layers: ['ingredient_processing'] },
-  { key: 'plants',       title: 'PLANTS',        layers: ['finished_goods_manufacturing'] },
-  { key: 'fg_inventory', title: 'FG INVENTORY',  layers: ['finished_goods_inventory'] },
-  { key: 'cold_dc',      title: 'COLD CHAIN DC', layers: ['distribution'] },
-  { key: 'retailer_dc',  title: 'RETAILER DC',   layers: ['retailer_replenishment', 'foodservice_replenishment'] },
+  { key: 'suppliers',    title: 'SUPPLIERS',                layers: ['raw_material_supplier', 'packaging_supplier'] },
+  { key: 'rm_inventory', title: 'RAW MATERIAL\nINVENTORY',  layers: ['raw_material_inventory', 'packaging_inventory'] },
+  { key: 'processing',   title: 'RAW MATERIAL\nPLANTS',     layers: ['ingredient_processing'] },
+  { key: 'plants',       title: 'SANDWICH PLANT',           layers: ['finished_goods_manufacturing'] },
+  { key: 'fg_inventory', title: 'FINISHED GOODS\nINVENTORY', layers: ['finished_goods_inventory'] },
+  { key: 'cold_dc',      title: 'COLD CHAIN\nDISTRIBUTION', layers: ['distribution'] },
+  { key: 'retailer_dc',  title: 'RETAILER\nFULFILLMENT',   layers: ['retailer_replenishment', 'foodservice_replenishment'] },
 ];
 
 /* Display names + primary KPI (drives the node sub-label, node health
    and the "most relevant source system" shown in the hover popover).  */
 export const NODE_META = {
-  supplier_flour_great_plains_bulk:      { name: 'Flour · GP Bulk',      primaryKpi: 'contracted_flour_capacity_lb_per_week', order: 0 },
-  supplier_flour_regional_fast_response: { name: 'Flour · Fast Resp',    primaryKpi: 'surge_flour_capacity_lb_per_week', order: 1 },
-  supplier_peanuts_southeast_contract:   { name: 'Peanuts · SE Contract',primaryKpi: 'contract_peanut_volume_lb_per_week', order: 2 },
-  supplier_peanuts_regional_fast_response:{ name: 'Peanuts · Fast Resp', primaryKpi: 'emergency_peanut_capacity_lb_per_week', order: 3 },
-  supplier_fruit_west_bulk:              { name: 'Fruit · West Bulk',    primaryKpi: 'frozen_fruit_base_capacity_lb_per_week', order: 4 },
-  supplier_fruit_midwest_fast_response:  { name: 'Fruit · MW Fast',      primaryKpi: 'short_cycle_fruit_base_capacity_lb_per_week', order: 5 },
-  supplier_sugar_bulk_refiner:           { name: 'Sugar Refiner',        primaryKpi: 'refined_sugar_capacity_lb_per_week', order: 6 },
-  supplier_oils_fats_regional:           { name: 'Oils & Fats',          primaryKpi: 'oil_fat_capacity_lb_per_week', order: 7 },
-  supplier_film_wrap_converter:          { name: 'Film Wrap',            primaryKpi: 'wrapper_capacity_units_per_week', order: 8 },
-  supplier_carton_corrugate_converter:   { name: 'Carton & Corrugate',   primaryKpi: 'carton_capacity_units_per_week', order: 9 },
+  supplier_flour_great_plains_bulk:      { name: 'Flour Supplier 01',       primaryKpi: 'contracted_flour_capacity_lb_per_week', order: 0 },
+  supplier_flour_regional_fast_response: { name: 'Flour Supplier 02',       primaryKpi: 'surge_flour_capacity_lb_per_week', order: 1 },
+  supplier_peanuts_southeast_contract:   { name: 'Peanut Supplier 03',      primaryKpi: 'contract_peanut_volume_lb_per_week', order: 2 },
+  supplier_peanuts_regional_fast_response:{ name: 'Peanut Supplier 04',     primaryKpi: 'emergency_peanut_capacity_lb_per_week', order: 3 },
+  supplier_fruit_west_bulk:              { name: 'Fruit Supplier 05',       primaryKpi: 'frozen_fruit_base_capacity_lb_per_week', order: 4 },
+  supplier_fruit_midwest_fast_response:  { name: 'Fruit Supplier 06',       primaryKpi: 'short_cycle_fruit_base_capacity_lb_per_week', order: 5 },
+  supplier_sugar_bulk_refiner:           { name: 'Sugar Supplier 07',       primaryKpi: 'refined_sugar_capacity_lb_per_week', order: 6 },
+  supplier_oils_fats_regional:           { name: 'Oils & Fats Supplier 08', primaryKpi: 'oil_fat_capacity_lb_per_week', order: 7 },
+  supplier_film_wrap_converter:          { name: 'Film Supplier 09',        primaryKpi: 'wrapper_capacity_units_per_week', order: 8 },
+  supplier_carton_corrugate_converter:   { name: 'Carton Supplier 10',      primaryKpi: 'carton_capacity_units_per_week', order: 9 },
 
-  inventory_flour_receiving:     { name: 'Flour RM',       primaryKpi: 'flour_days_of_cover', order: 0 },
-  inventory_peanut_receiving:    { name: 'Peanut RM',      primaryKpi: 'peanut_days_of_cover', order: 1 },
-  inventory_fruit_base_receiving:{ name: 'Fruit Base RM',  primaryKpi: 'fruit_base_days_of_cover', order: 2 },
-  inventory_sugar_oils_receiving:{ name: 'Oils & Fats RM',primaryKpi: 'oil_fat_days_of_cover', order: 3 },
-  inventory_packaging_receiving: { name: 'Packaging RM',   primaryKpi: 'wrapper_days_of_cover', order: 4 },
+  inventory_flour_receiving:     { name: 'Flour Raw Material',       primaryKpi: 'flour_days_of_cover', order: 0 },
+  inventory_peanut_receiving:    { name: 'Peanut Raw Material',      primaryKpi: 'peanut_days_of_cover', order: 1 },
+  inventory_fruit_base_receiving:{ name: 'Fruit Base Raw Material',  primaryKpi: 'fruit_base_days_of_cover', order: 2 },
+  inventory_sugar_oils_receiving:{ name: 'Oils & Fats Raw Material', primaryKpi: 'oil_fat_days_of_cover', order: 3 },
+  inventory_packaging_receiving: { name: 'Packaging Raw Material',   primaryKpi: 'wrapper_days_of_cover', order: 4 },
 
   processing_peanut_butter_network: { name: 'Peanut Butter Plant', primaryKpi: 'peanut_butter_output_lb_per_week', order: 0 },
   processing_fruit_spread_network:  { name: 'Fruit Spread Plant',  primaryKpi: 'fruit_spread_output_lb_per_week', order: 1 },
@@ -41,9 +41,9 @@ export const NODE_META = {
   plant_longmont_frozen_sandwich:    { name: 'Longmont Uncrustables Plant', primaryKpi: 'longmont_sandwiches_per_week', order: 1 },
   plant_mccalla_frozen_sandwich:     { name: 'McCalla',     primaryKpi: 'mccalla_sandwiches_per_week', order: 2 },
 
-  frozen_inventory_scottsville: { name: 'Scottsville FG', primaryKpi: 'scottsville_finished_goods_days_of_cover', order: 0 },
-  frozen_inventory_longmont:    { name: 'Longmont FG',    primaryKpi: 'longmont_finished_goods_days_of_cover', order: 1 },
-  frozen_inventory_mccalla:     { name: 'McCalla FG',     primaryKpi: 'mccalla_finished_goods_days_of_cover', order: 2 },
+  frozen_inventory_scottsville: { name: 'Scottsville Finished Goods', primaryKpi: 'scottsville_finished_goods_days_of_cover', order: 0 },
+  frozen_inventory_longmont:    { name: 'Longmont Finished Goods', primaryKpi: 'longmont_finished_goods_days_of_cover', order: 1 },
+  frozen_inventory_mccalla:     { name: 'McCalla Finished Goods', primaryKpi: 'mccalla_finished_goods_days_of_cover', order: 2 },
 
   cold_dc_west:      { name: 'West Cold DC',    primaryKpi: 'west_dc_frozen_pallet_capacity', order: 0 },
   cold_dc_central:   { name: 'Central Cold DC', primaryKpi: 'central_dc_network_rebalance_cases_per_week', order: 1 },
@@ -64,10 +64,10 @@ export const NODE_META = {
    "{Alert Source} Agent", from the alert's primary signal system */
 export const ALERT_META = {
   TAC_001_oils_fats_inbound_delay: {
-    code: 'INBOUND DELAY AGENT',
-    title: 'Oils & fats inbound delay',
+    code: 'OUTBOUND DELAY',
+    title: 'Oils & fats delivery delayed',
     origins: ['supplier_oils_fats_regional'],
-    sensed: 'SAP purchase-order exceptions and carrier tracking show the inbound oils and fats tanker arriving five days late. Longmont begins with three days of oil cover, so the delay can constrain production and retailer fulfillment.',
+    sensed: "The supplier's oils and fats tanker is leaving five days late.",
   },
 };
 
@@ -124,7 +124,10 @@ export function money(v, opts = {}) {
 }
 export function pretty(s) {
   if (s == null) return '';
-  return String(s).replace(/_/g, ' ').replace(/\b(usd|otif|oee|edi|erp|wms|tms|mes|aps|srm|qms|lims|plm|eam|cmms|3pl|dc|fg|rm|sla|rdd|sku|hr|pct|p90)\b/gi,
+  return String(s).replace(/_/g, ' ')
+    .replace(/\bfg\b/gi, 'finished goods')
+    .replace(/\brm\b/gi, 'raw material')
+    .replace(/\b(usd|otif|oee|edi|erp|wms|tms|mes|aps|srm|qms|lims|plm|eam|cmms|3pl|dc|sla|rdd|sku|hr|pct|p90)\b/gi,
     m => m.toUpperCase());
 }
 export function fmtKpiValue(kpi) {
@@ -358,9 +361,9 @@ export const INTERVENTION_NODES = {
 };
 
 export const INTERVENTION_PROPOSALS = {
-  expedite_delayed_oil_tanker: 'Upgrade the delayed oil tanker to team-driver service and recover the load three days earlier.',
-  source_emergency_oil_supply: 'Release five days of qualified regional oil supply before the Longmont tank reaches minimum.',
-  prioritize_longmont_oil_allocation: "Prioritize lower-oil Longmont SKUs and protect Costco and Sam's Club orders until the tanker arrives.",
+  expedite_delayed_oil_tanker: 'Schedule an expedited tanker pickup today, reserve a Longmont receiving slot, and recover the load three days earlier.',
+  source_emergency_oil_supply: 'Schedule five days of qualified emergency oil for tomorrow and protect Longmont before the tank reaches minimum.',
+  prioritize_longmont_oil_allocation: "Schedule priority production within two hours, use less oil per case, and protect Costco and Sam's Club orders.",
   expedite_current_reefer: 'Upgrade the delayed Central→Walmart reefer to a team-driver expedite: recover ~1.5 days of transit at 2.2× lane freight on the affected load.',
   ship_replacement_from_southeast_dc: "Cut replacement orders at SE Cold DC covering ~90% of Walmart's shortfall, shipped on the 1.5-day lane at 1.8× freight while the late load continues inbound.",
   split_replacement_central_and_southeast_dc: "Split replacement shipments across Central + SE Cold DC to cover ~96% of Walmart's at-risk cases before the requested delivery date, at ~1.9× freight.",
@@ -381,37 +384,43 @@ export const INTERVENTION_PROPOSALS = {
   reserve_converter_capacity: 'Reserve print slots and film capacity ahead of the increase, capping ~50% of wrapper and ~35% of carton inflation ($180K reservation).',
 };
 
+export const INTERVENTION_TITLES = {
+  expedite_delayed_oil_tanker: 'Schedule expedited tanker recovery',
+  source_emergency_oil_supply: 'Schedule emergency oil delivery',
+  prioritize_longmont_oil_allocation: 'Schedule priority Longmont production',
+};
+
 /* Enterprise-system execution sequence shared by Decide and Act. */
 export const INTERVENTION_AGENT_STEPS = {
   expedite_delayed_oil_tanker: [
-    ['supplier_oils_fats_regional', 'TMS', 'Locate the delayed tanker and confirm available driver hours.'],
-    ['supplier_oils_fats_regional', 'TMS', 'Upgrade the load to team-driver expedited service.'],
-    ['inventory_sugar_oils_receiving', 'SAP', 'Update the oil purchase-order arrival date.'],
-    ['inventory_sugar_oils_receiving', 'WMS', 'Reserve a priority tanker unloading slot.'],
-    ['processing_fruit_spread_network', 'APS', 'Refresh oil availability for fruit-spread batches.'],
-    ['plant_longmont_frozen_sandwich', 'MES', 'Confirm the recovered Longmont production plan.'],
-    ['retailer_costco', 'OMS', 'Reconfirm Costco order fulfillment.'],
-    ['retailer_sams_club', 'OMS', "Reconfirm Sam's Club order fulfillment."],
+    ['supplier_oils_fats_regional', 'TMS', 'Confirm the tanker location and schedule team-driver pickup today.'],
+    ['inventory_sugar_oils_receiving', 'SAP', 'Commit the recovered arrival time to the oil purchase order.'],
+    ['inventory_sugar_oils_receiving', 'WMS', 'Schedule a priority unloading slot at Longmont receiving.'],
+    ['processing_fruit_spread_network', 'APS', 'Reschedule Fruit Spread Plant batches against the recovered oil arrival.'],
+    ['plant_longmont_frozen_sandwich', 'MES', 'Schedule the recovered Uncrustables production sequence.'],
+    ['frozen_inventory_longmont', 'WMS', 'Rebuild the finished goods release schedule.'],
+    ['cold_dc_west', 'TMS', 'Schedule West Cold DC deployment from recovered production.'],
+    ['retailer_costco', 'OMS', "Publish the recovered Costco and Sam's Club commitment times."],
   ],
   source_emergency_oil_supply: [
-    ['inventory_sugar_oils_receiving', 'SAP', 'Read the uncovered oil requirement and tank balance.'],
-    ['supplier_oils_fats_regional', 'SRM', 'Find approved regional oil capacity.'],
-    ['supplier_oils_fats_regional', 'QMS', 'Confirm the alternate lot specification.'],
-    ['inventory_sugar_oils_receiving', 'SAP', 'Release the emergency oil purchase order.'],
-    ['inventory_sugar_oils_receiving', 'WMS', 'Book priority receiving and quality release.'],
-    ['processing_fruit_spread_network', 'APS', 'Refresh the Fruit Spread Plant material plan.'],
-    ['plant_longmont_frozen_sandwich', 'MES', 'Confirm full Longmont production recovery.'],
-    ['cold_dc_west', 'WMS', 'Protect retailer deployment quantities.'],
+    ['inventory_sugar_oils_receiving', 'SAP', 'Calculate the uncovered oil requirement and required delivery time.'],
+    ['supplier_oils_fats_regional', 'SRM', 'Schedule qualified emergency supply for delivery tomorrow.'],
+    ['supplier_oils_fats_regional', 'QMS', 'Schedule the alternate lot quality release before dispatch.'],
+    ['inventory_sugar_oils_receiving', 'WMS', 'Schedule priority receiving and tank transfer at Longmont.'],
+    ['processing_fruit_spread_network', 'APS', 'Reschedule Fruit Spread Plant batches with emergency oil.'],
+    ['plant_longmont_frozen_sandwich', 'MES', 'Schedule full Uncrustables production recovery.'],
+    ['cold_dc_west', 'WMS', 'Protect recovered finished goods deployment quantities.'],
+    ['retailer_sams_club', 'OMS', "Publish recovered Costco and Sam's Club fulfillment dates."],
   ],
   prioritize_longmont_oil_allocation: [
-    ['inventory_sugar_oils_receiving', 'SAP', 'Read usable oil inventory and open requirements.'],
-    ['processing_fruit_spread_network', 'APS', 'Allocate oil to lower-consumption priority recipes.'],
-    ['plant_longmont_frozen_sandwich', 'MES', 'Resequence Longmont to protected retailer SKUs.'],
-    ['frozen_inventory_longmont', 'WMS', 'Reserve finished goods for priority orders.'],
-    ['cold_dc_west', 'APS', 'Rebalance the West DC deployment plan.'],
-    ['retailer_sams_club', 'OMS', "Protect Sam's Club committed orders."],
-    ['retailer_costco', 'OMS', 'Protect Costco committed orders.'],
-    ['retailer_other', 'OMS', 'Publish revised availability to other retailers.'],
+    ['inventory_sugar_oils_receiving', 'SAP', 'Calculate usable oil inventory and protected order requirements.'],
+    ['processing_fruit_spread_network', 'APS', 'Schedule lower-oil recipes for the next production window.'],
+    ['plant_longmont_frozen_sandwich', 'MES', 'Schedule priority retailer items within two hours.'],
+    ['frozen_inventory_longmont', 'WMS', 'Reserve recovered finished goods for protected orders.'],
+    ['cold_dc_west', 'APS', 'Reschedule West Cold DC deployment by retailer priority.'],
+    ['retailer_sams_club', 'OMS', "Lock Sam's Club orders into the protected schedule."],
+    ['retailer_costco', 'OMS', 'Lock Costco orders into the protected schedule.'],
+    ['retailer_other', 'OMS', 'Publish revised delivery times for remaining retailers.'],
   ],
 };
 

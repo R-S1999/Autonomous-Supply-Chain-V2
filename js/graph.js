@@ -65,9 +65,14 @@ export function renderGraph(container, opts = {}) {
 
   /* column headers */
   COLUMNS.forEach((col, i) => {
-    const t = svgEl('text', { x: COL_X[i], y: 58, class: 'col-title', 'text-anchor': 'middle' });
-    t.textContent = col.title;
-    const u = svgEl('rect', { x: COL_X[i] - 14, y: 66, width: 28, height: 3, rx: 1.5, class: 'col-underline' });
+    const lines = col.title.split('\n');
+    const t = svgEl('text', { x: COL_X[i], y: lines.length > 1 ? 45 : 59, class: 'col-title', 'text-anchor': 'middle' });
+    lines.forEach((line, lineIndex) => {
+      const span = svgEl('tspan', { x: COL_X[i], dy: lineIndex ? 17 : 0 });
+      span.textContent = line;
+      t.appendChild(span);
+    });
+    const u = svgEl('rect', { x: COL_X[i] - 14, y: 69, width: 28, height: 3, rx: 1.5, class: 'col-underline' });
     gTop.append(t, u);
   });
 
@@ -117,14 +122,25 @@ export function renderGraph(container, opts = {}) {
     const dot = svgEl('circle', { r: Math.max(3.2, p.r / 4.6), class: 'node-dot' });
     const name = svgEl('text', { y: p.r + 15, class: 'node-name', 'text-anchor': 'middle' });
     const displayName = NODE_META[node.id]?.name ?? node.id;
-    if (node.id === 'plant_longmont_frozen_sandwich') {
+    const nameLines = (() => {
+      if (node.id === 'plant_longmont_frozen_sandwich') return ['Longmont', 'Uncrustables Plant'];
+      for (const suffix of [' Raw Material', ' Finished Goods', ' Supplier 01', ' Supplier 02', ' Supplier 03', ' Supplier 04', ' Supplier 05', ' Supplier 06', ' Supplier 07', ' Supplier 08', ' Supplier 09', ' Supplier 10']) {
+        if (displayName.endsWith(suffix)) return [displayName.slice(0, -suffix.length), suffix.trim()];
+      }
+      if (displayName === 'Peanut Butter Plant') return ['Peanut Butter', 'Plant'];
+      if (displayName === 'Fruit Spread Plant') return ['Fruit Spread', 'Plant'];
+      return [displayName];
+    })();
+    if (nameLines.length > 1) {
       name.setAttribute('y', p.r + 13);
-      const line1 = svgEl('tspan', { x: 0, dy: 0 }); line1.textContent = 'Longmont';
-      const line2 = svgEl('tspan', { x: 0, dy: 12 }); line2.textContent = 'Uncrustables Plant';
-      name.append(line1, line2);
+      nameLines.forEach((line, index) => {
+        const tspan = svgEl('tspan', { x: 0, dy: index ? 14 : 0 });
+        tspan.textContent = line;
+        name.appendChild(tspan);
+      });
     } else name.textContent = displayName;
     const sub = svgEl('text', { y: p.r + 28, class: 'node-sub', 'text-anchor': 'middle' });
-    if (node.id === 'plant_longmont_frozen_sandwich') sub.setAttribute('y', p.r + 42);
+    if (nameLines.length > 1) sub.setAttribute('y', p.r + 45);
     sub.textContent = nodeSubLabel(node);
     /* node-level alert badge (code tag anchored top-right of the ring) */
     const tag = svgEl('g', { class: 'alert-tag hidden' });
@@ -165,6 +181,7 @@ export function renderGraph(container, opts = {}) {
   let activeAlerts = {}; // nodeId -> [eventId]
   let compareMap = null; // nodeId -> metric -> {bau, worst, pct, day} (worst-in-window vs BAU)
   let nodeCostMap = null; // nodeId -> { cost, total }
+  let edgeAlert = null;
 
   function alertSectionHtml(nodeId) {
     const evIds = activeAlerts[nodeId] || [];
@@ -199,6 +216,9 @@ export function renderGraph(container, opts = {}) {
     const overrides = currentFrame?.valueOverrides?.[nodeId] || {};
     const health = currentFrame?.nodeHealth?.[nodeId] || 'good';
     const kpis = node.kpis || [];
+    const visibleKpis = opts.changedMetricsOnly
+      ? kpis.filter(k => compareMap?.[nodeId]?.[k.name])
+      : kpis;
     pop.innerHTML = `
       <div class="pop-head">
         <div>
@@ -209,9 +229,9 @@ export function renderGraph(container, opts = {}) {
       </div>
       ${alertSectionHtml(nodeId)}
       ${nodeCostSectionHtml(nodeId)}
-      ${compareMap?.[nodeId] ? '<div class="pop-cmp-note">HIGHLIGHTED ROWS = WORST IN DISRUPTION WINDOW VS BAU NORMAL</div>' : ''}
+      ${compareMap?.[nodeId] ? `<div class="pop-cmp-note">${opts.compareNote || 'CHANGED KPI DURING THE DISRUPTION WINDOW'}</div>` : ''}
       <div class="pop-kpis">
-        ${kpis.map(k => {
+        ${visibleKpis.map(k => {
           const cmp = compareMap?.[nodeId]?.[k.name];
           if (cmp) {
             return `<div class="pop-kpi pop-kpi-cmp">
@@ -219,7 +239,7 @@ export function renderGraph(container, opts = {}) {
               <span class="pop-kpi-val overridden">
                 <s>${fmtKpiValue({ ...k, modeled_value: cmp.bau })}</s> →
                 ${fmtKpiValue({ ...k, modeled_value: cmp.worst })}
-                <em class="cmp-delta">LOW · DAY ${cmp.day}</em>
+                <em class="cmp-delta">${cmp.tag || `LOW · DAY ${cmp.day}`}</em>
               </span>
             </div>`;
           }
@@ -234,12 +254,12 @@ export function renderGraph(container, opts = {}) {
           </div>`;
         }).join('')}
         ${Object.entries(compareMap?.[nodeId] || {})
-          .filter(([mk]) => !kpis.some(k => k.name === mk))
+          .filter(([mk]) => !visibleKpis.some(k => k.name === mk))
           .map(([mk, cmp]) => `<div class="pop-kpi pop-kpi-cmp">
             <span class="pop-kpi-name">${pretty(mk)}</span>
             <span class="pop-kpi-val overridden">
               <s>${fmtCompare(cmp.bau, cmp.unit)}</s> → ${fmtCompare(cmp.worst, cmp.unit)}
-              <em class="cmp-delta">LOW · DAY ${cmp.day}</em>
+              <em class="cmp-delta">${cmp.tag || `LOW · DAY ${cmp.day}`}</em>
             </span>
           </div>`).join('')}
       </div>
@@ -394,7 +414,9 @@ export function renderGraph(container, opts = {}) {
     setAgentBadge(nodeId) {
       if (!nodeId || !pos[nodeId]) { agentBadge.classList.add('hidden'); return; }
       const p = pos[nodeId];
-      agentBadge.setAttribute('transform', `translate(${p.x} ${p.y - p.r - 44})`);
+      const badgeX = p.col === 0 ? p.x + p.r + 47 : p.x;
+      const badgeY = p.col === 0 ? p.y - 5 : p.y - p.r - 44;
+      agentBadge.setAttribute('transform', `translate(${badgeX} ${badgeY})`);
       agentBadge.classList.remove('hidden');
     },
     showAgentAction(nodeId, system, message = '', phase = 'processing', source = 'AI AGENT') {
@@ -409,7 +431,7 @@ export function renderGraph(container, opts = {}) {
         ? `Connecting to ${system} and processing the next enterprise action…` : message;
 
       const wrapR = container.getBoundingClientRect(), nodeR = ring.getBoundingClientRect();
-      const cardW = Math.min(270, wrapR.width - 24);
+      const cardW = Math.min(310, wrapR.width - 24);
       let left = nodeR.right - wrapR.left + 18, side = 'right';
       if (left + cardW > wrapR.width - 10) {
         left = nodeR.left - wrapR.left - cardW - 18;
@@ -452,7 +474,7 @@ export function renderGraph(container, opts = {}) {
           <div>${impact.components.map(component => `<p><em>${pretty(component.key)}</em><b>${nodeImpactMoney(component.value)}</b></p>`).join('')}</div>`;
         nodeCostLayer.appendChild(card);
 
-        const nodeR = ring.getBoundingClientRect(), cardW = 168;
+        const nodeR = ring.getBoundingClientRect(), cardW = 185;
         card.style.width = `${cardW}px`; card.style.left = '0px'; card.style.top = '0px';
         const height = card.offsetHeight, nx1 = nodeR.left - wrapR.left, nx2 = nodeR.right - wrapR.left;
         const ny1 = nodeR.top - wrapR.top, ny2 = nodeR.bottom - wrapR.top, cx = (nx1 + nx2) / 2, cy = (ny1 + ny2) / 2;
@@ -482,6 +504,37 @@ export function renderGraph(container, opts = {}) {
       });
     },
     clearNodeCostCards() { nodeCostLayer.innerHTML = ''; },
+    setNodeHealth(nodeId, health) {
+      const g = nodeEls[nodeId]; if (!g) return;
+      g.classList.remove('h-good', 'h-amber', 'h-red');
+      g.classList.add(`h-${health}`);
+    },
+    setEdgeState(edgeId, state = 'flow') {
+      const ps = particleSets[edgeId], edge = edgeEls[edgeId]; if (!ps || !edge) return;
+      ps.state = state;
+      edge.classList.toggle('lane-disrupted', state === 'disrupted');
+      edge.classList.toggle('lane-watch', state === 'watch');
+      for (const d of ps.dots) d.el.classList.toggle('dot-disrupted', state === 'disrupted');
+    },
+    setEdgeAlert(edgeId, label = 'OUTBOUND DELAY') {
+      if (edgeAlert) edgeAlert.remove();
+      edgeAlert = null;
+      for (const edge of Object.values(edgeEls)) edge.classList.remove('lane-alert-focus');
+      const path = edgeEls[edgeId]; if (!path) return;
+      path.classList.add('lane-alert-focus');
+      const point = path.getPointAtLength(path.getTotalLength() * .56);
+      const tag = svgEl('g', { class: 'edge-alert-tag', transform: `translate(${point.x} ${point.y - 15})` });
+      const width = Math.max(100, label.length * 7.4 + 24);
+      const bg = svgEl('rect', { x: -width / 2, y: -14, width, height: 27, rx: 13.5 });
+      const text = svgEl('text', { x: 0, y: 4, 'text-anchor': 'middle' });
+      text.textContent = label;
+      tag.append(bg, text); gTop.appendChild(tag); edgeAlert = tag;
+    },
+    clearEdgeAlert() {
+      if (edgeAlert) edgeAlert.remove();
+      edgeAlert = null;
+      for (const edge of Object.values(edgeEls)) edge.classList.remove('lane-alert-focus');
+    },
     showPopover,
     destroy() { cancelAnimationFrame(raf); container.innerHTML = ''; container.classList.remove('graph-wrap'); },
   };

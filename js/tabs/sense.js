@@ -1,50 +1,103 @@
-// SENSE — current-state view. The 6-month BAU DES runs silently up front;
-// what you see is its end state: node health as the network actually settles
-// (not forced green), live computed KPIs in the popovers, alerts pinned on
-// their origin nodes, and the 1-MO / 6-MO BAU cost-to-fulfill cards on the
-// right — hover for the full simulated cost breakdown.
-import { renderGraph } from '../graph.js?v=costledger3';
-import { ALERTS_BY_ORIGIN } from '../model.js?v=costledger';
-import { runBau } from '../engine.js?v=costledger';
-import { bauCards, fillCostCard, attachBreakdown } from '../costcards.js?v=costledger';
+import { renderGraph } from '../graph.js?v=experience5';
+import { TimelinePlayer } from '../sim.js';
+import { EVENTS, ALERT_META, money } from '../model.js?v=experience5';
+import { runBau, runScenario } from '../engine.js?v=costledger';
+import { disruptionSummary } from '../scenario.js?v=experience5';
 
 export function renderSense(view, ctx) {
+  const event = EVENTS[0];
+  const meta = ALERT_META[event.id];
+  const alertVisible = !!ctx.state.senseAlertsVisible;
+  const bau = runBau();
+  const disruption = runScenario(event.id);
+  const summary = disruptionSummary(bau, disruption, event);
+
   view.innerHTML = `
-    <div class="sim-layout">
-      <div class="sim-canvas" id="sense-canvas"></div>
-      <aside class="sim-rail sim-rail-right">
-        <div class="cost-card rail-card" id="sn-1mo"></div>
-        <div class="cost-card rail-card" id="sn-6mo"></div>
-        <div class="rail-note">BAU discrete-event run · 182 days ·
-          reorder policies, supplier caps, compliance & spoilage applied.
-          Node colors are the settled end-state, not a target.</div>
-      </aside>
+    <div class="sense-workspace ${alertVisible ? 'alert-open' : 'network-only'}">
+      <section class="sense-main">
+        <div class="scenario-titlebar sense-titlebar">
+          <span class="${alertVisible ? 'alert-dot' : 'live-dot'}"></span>
+          <b>${alertVisible ? 'SENSE · ACTIVE SUPPLY RISK' : 'LIVE UNCRUSTABLES SUPPLY NETWORK'}</b>
+          <i>${alertVisible ? 'One material movement needs attention' : 'Select Sense or Alerts to inspect active risks'}</i>
+        </div>
+        <div class="workspace-graph" id="sense-canvas"></div>
+        <div class="workspace-clock sense-clock ${alertVisible ? '' : 'network-status'}">
+          <span class="mode" id="sense-mode">${alertVisible ? 'OUTBOUND DELAY DETECTED' : 'NETWORK OPERATING VIEW'}</span>
+          <span class="day" id="sense-day">${alertVisible ? 'READY' : 'LIVE'}</span>
+          <span class="phase pre" id="sense-phase">${alertVisible ? 'AWAITING SIMULATION' : 'NO ALERT LAYER'}</span>
+          ${alertVisible ? '<button id="sense-restart">RUN AGAIN</button>' : ''}
+        </div>
+      </section>
+      ${alertVisible ? `<aside class="sense-alert-rail">
+        <div class="sense-alert-head"><span>ACTIVE ALERT</span><b>01</b></div>
+        <article class="sense-alert-card">
+          <div class="sense-alert-code"><span class="alert-dot"></span>${meta.code}</div>
+          <h1>${meta.title}</h1>
+          <div class="sense-cause"><span>CAUSE</span><b>${meta.sensed}</b></div>
+          <button class="sense-simulate" id="sense-simulate">SIMULATE DISRUPTION</button>
+        </article>
+        <div class="sense-impact hidden" id="sense-impact">
+          <span>30-DAY DISRUPTION COST</span>
+          <strong>${money(summary.total, { plus: true })}</strong>
+          <p>Computed from downtime, transport, inventory, retailer penalties and lost sales across the affected nodes.</p>
+        </div>
+        <div class="sense-rail-note" id="sense-note">The highlighted lane is delayed. Nodes remain unchanged until the disruption is simulated.</div>
+      </aside>` : ''}
     </div>`;
 
-  const canvas = view.querySelector('#sense-canvas');
-  const graph = renderGraph(canvas, {
-    onSimulate: (eventId) => ctx.gotoTab('simulate', { eventId }),
+  const graph = renderGraph(view.querySelector('#sense-canvas'), {
+    changedMetricsOnly: true,
+    compareNote: 'ONLY THE KPI CHANGED BY THIS DISRUPTION',
   });
+  graph.setFrame(null);
+  if (alertVisible) graph.setEdgeAlert('rel_oils_to_sugar_oils_inventory', 'OUTBOUND DELAY');
 
-  const bau = runBau();
-  graph.setAlerts(ALERTS_BY_ORIGIN);
-  graph.setFrame(bau.frames[bau.frames.length - 1]); // settled 6-month state
+  if (!alertVisible) return () => graph.destroy();
 
-  const { oneMo, sixMo } = bauCards();
-  const c1 = view.querySelector('#sn-1mo');
-  const c6 = view.querySelector('#sn-6mo');
-  fillCostCard(c1, '1-MO BAU', oneMo);
-  fillCostCard(c6, '6-MO BAU', sixMo);
-  const d1 = attachBreakdown(c1, '1-MONTH BAU', oneMo);
-  const d6 = attachBreakdown(c6, '6-MONTH BAU', sixMo);
+  const button = view.querySelector('#sense-simulate');
+  const restart = view.querySelector('#sense-restart');
+  const day = view.querySelector('#sense-day');
+  const phase = view.querySelector('#sense-phase');
+  const impact = view.querySelector('#sense-impact');
+  const note = view.querySelector('#sense-note');
+  let player = null;
 
-  const hint = document.createElement('div');
-  hint.className = 'sense-hint';
-  hint.innerHTML = `<span class="alert-dot"></span> AMBER TAG = ALERT ORIGIN ·
-    CLICK FOR DISRUPTION DETAIL · HOVER FOR LIVE KPIS`;
-  canvas.appendChild(hint);
+  const play = () => {
+    player?.destroy();
+    graph.setCompare(null);
+    graph.setNodeCosts(null);
+    graph.clearNodeCostCards();
+    graph.setFrame(null);
+    graph.setEdgeAlert('rel_oils_to_sugar_oils_inventory', 'OUTBOUND DELAY');
+    impact.classList.add('hidden');
+    button.disabled = true;
+    button.textContent = 'SIMULATION RUNNING';
+    note.textContent = 'Following the delay through raw material, production, finished goods and retailer fulfillment.';
 
-  if (ctx.state.debugPopNode) setTimeout(() => graph.showPopover(ctx.state.debugPopNode), 600);
+    player = new TimelinePlayer(disruption.frames, (frame, index) => {
+      graph.setFrame(frame);
+      day.textContent = `DAY ${index + 1} / 30`;
+      phase.textContent = frame.phase === 'pre' ? 'BEFORE DELAY'
+        : frame.phase === 'active' ? 'DISRUPTION SPREADING'
+          : 'DOWNSTREAM IMPACT';
+      phase.className = `phase ${frame.phase}`;
+      if (index === disruption.frames.length - 1) {
+        graph.setFrame(summary.frame);
+        graph.setCompare(summary.compare);
+        graph.setNodeCosts(summary.nodeCosts);
+        graph.showNodeCostCards(summary.nodeCosts);
+        impact.classList.remove('hidden');
+        button.disabled = false;
+        button.textContent = 'SIMULATE AGAIN';
+        phase.textContent = 'IMPACT CONFIRMED';
+        phase.className = 'phase active';
+        note.textContent = 'All red nodes are affected. Hover or click a node to see only its changed KPI and computed cost.';
+      }
+    }, { msPerTick: 220 });
+    player.play();
+  };
 
-  return () => { d1(); d6(); graph.destroy(); };
+  button.addEventListener('click', play);
+  restart.addEventListener('click', play);
+  return () => { player?.destroy(); graph.destroy(); };
 }
