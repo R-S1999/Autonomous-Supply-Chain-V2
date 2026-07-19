@@ -1,29 +1,50 @@
 // App shell: tab routing. Cost cards live inside the Sense/Simulate screens
 // (right rail), computed by the DES engine.
 import { renderSense } from './tabs/sense.js?v=experience13';
-import { renderSimulate } from './tabs/simulate.js?v=experience13';
-import { renderIntervene } from './tabs/intervene.js?v=experience11';
-import { renderAct } from './tabs/act.js?v=experience16';
+import { renderSimulate } from './tabs/simulate.js?v=experience17';
+import { renderIntervene } from './tabs/intervene.js?v=experience17';
+import { renderAct } from './tabs/act.js?v=experience17';
+import { renderSummary } from './tabs/summary.js?v=experience17';
 import { EVENTS } from './model.js?v=experience11';
 
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 document.getElementById('alerts-count').textContent = EVENTS.length;
 
-const state = { selectedEventId: null, selectedInterventionId: null };
+let savedInterventionId = null;
+try { savedInterventionId = sessionStorage.getItem('selectedInterventionId'); } catch { /* storage may be disabled */ }
+const state = {
+  selectedEventId: null,
+  selectedInterventionId: savedInterventionId,
+  autoRunSimulation: false,
+};
 let destroyCurrent = null;
 let activeTab = null;
 
 const ctx = {
   state,
+  selectIntervention(interventionId) {
+    state.selectedInterventionId = interventionId;
+    try {
+      if (interventionId) sessionStorage.setItem('selectedInterventionId', interventionId);
+      else sessionStorage.removeItem('selectedInterventionId');
+    } catch { /* storage may be disabled */ }
+  },
   gotoTab(tab, opts = {}) {
     if (opts.eventId !== undefined) state.selectedEventId = opts.eventId;
-    if (opts.interventionId !== undefined) state.selectedInterventionId = opts.interventionId;
+    if (opts.interventionId !== undefined) this.selectIntervention(opts.interventionId);
+    if (opts.autoRun !== undefined) state.autoRunSimulation = Boolean(opts.autoRun);
     switchTab(tab);
   },
 };
 
-const TABS = { sense: renderSense, simulate: renderSimulate, intervene: renderIntervene, act: renderAct };
+const TABS = {
+  sense: renderSense,
+  simulate: renderSimulate,
+  intervene: renderIntervene,
+  act: renderAct,
+  summary: renderSummary,
+};
 
 function switchTab(name) {
   if (!TABS[name]) return;

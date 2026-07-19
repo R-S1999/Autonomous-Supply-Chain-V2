@@ -94,10 +94,11 @@ export function renderSimulate(view, ctx) {
   const affectedEdges = event.affected_model_objects?.relationships || [];
   let selected = null;
   let player = null;
+  let autoRunTimer = null;
 
   const play = option => {
     selected = option;
-    ctx.state.selectedInterventionId = option.intervention.id;
+    ctx.selectIntervention(option.intervention.id);
     player?.destroy();
     graph.setCompare(null);
     graph.setNodeCosts(null);
@@ -181,5 +182,30 @@ export function renderSimulate(view, ctx) {
     eventId: event.id,
     interventionId: selected.intervention.id,
   }));
-  return () => { player?.destroy(); graph.destroy(); };
+
+  const preset = options.find(option => option.intervention.id === ctx.state.selectedInterventionId);
+  if (preset) {
+    selected = preset;
+    view.querySelectorAll('[data-option]').forEach(card => {
+      card.classList.toggle('selected', card.dataset.option === preset.intervention.id);
+    });
+    mode.textContent = INTERVENTION_TITLES[preset.intervention.id].toUpperCase();
+    day.textContent = 'READY TO SIMULATE';
+    phase.textContent = 'SELECTED IN DECIDE';
+    phase.className = 'phase pre';
+    outcome.innerHTML = `<span>SELECTED RESPONSE</span><b>${INTERVENTION_TITLES[preset.intervention.id]}</b><p>Run the option selected in Decide to see its node-by-node recovery.</p>`;
+    restart.disabled = false;
+    if (ctx.state.autoRunSimulation) {
+      ctx.state.autoRunSimulation = false;
+      autoRunTimer = setTimeout(() => play(preset), 80);
+    }
+  } else {
+    ctx.state.autoRunSimulation = false;
+  }
+
+  return () => {
+    if (autoRunTimer) clearTimeout(autoRunTimer);
+    player?.destroy();
+    graph.destroy();
+  };
 }

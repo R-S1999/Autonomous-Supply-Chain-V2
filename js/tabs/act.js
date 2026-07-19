@@ -187,6 +187,7 @@ export function renderAct(view, ctx) {
 
   function animate(intervention, steps, generatedByAgent) {
     button.disabled = true;
+    button.dataset.mode = 'run';
     button.textContent = 'AI AGENT ACTING';
     graph.clearAgentAction();
     steps.forEach((step, index) => timers.push(setTimeout(() => {
@@ -230,7 +231,8 @@ export function renderAct(view, ctx) {
         graph.clearTransientIntervention();
         update.innerHTML = '<b>INTERVENTION SCHEDULED</b><span>All enterprise actions are committed. The disrupted supply chain has recovered to green.</span>';
         button.disabled = false;
-        button.textContent = 'REGENERATE & RUN ↻';
+        button.dataset.mode = 'summary';
+        button.textContent = 'VIEW SUMMARY';
       }, FINAL_STEP_HOLD_MS));
     }, index * STEP_INTERVAL_MS)));
   }
@@ -243,12 +245,14 @@ export function renderAct(view, ctx) {
     graph.clearAgentAction();
     resetDisruptedNetwork();
     const intervention = currentIntervention();
+    ctx.selectIntervention(intervention.id);
     const blueprint = INTERVENTION_AGENT_STEPS[intervention.id];
     view.querySelector('#act-desc').textContent = INTERVENTION_PROPOSALS[intervention.id];
     source.textContent = 'INTERVENTION SCHEDULED · AI AGENT PREPARING';
     source.className = 'agent-source generating';
     update.innerHTML = '<b>PREPARING SCHEDULE</b><span>Creating enterprise-system actions for the selected intervention…</span>';
     button.disabled = true;
+    button.dataset.mode = 'run';
     button.textContent = 'PREPARING AGENT';
     renderSteps(blueprint);
     let steps = blueprint;
@@ -270,7 +274,16 @@ export function renderAct(view, ctx) {
   }
 
   select.addEventListener('change', generateAndRun);
-  button.addEventListener('click', generateAndRun);
+  button.addEventListener('click', () => {
+    if (button.dataset.mode === 'summary') {
+      ctx.gotoTab('summary', {
+        eventId: event.id,
+        interventionId: currentIntervention().id,
+      });
+      return;
+    }
+    generateAndRun();
+  });
   resetDisruptedNetwork();
   timers.push(setTimeout(generateAndRun, 350));
   return () => {

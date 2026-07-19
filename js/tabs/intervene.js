@@ -35,15 +35,16 @@ export function renderIntervene(view, ctx) {
     <header class="decide-summary">
       <div>
         <span class="section-kicker">DECIDE · 30-DAY HORIZON</span>
-        <h1>Choose the best scheduled response</h1>
-        <p>${meta.title} · Every option has been run through the same disruption.</p>
+        <h1>Choose the response to carry forward</h1>
+        <p>${meta.title} · Select one option, then simulate it or enact it through the AI Agent.</p>
       </div>
       <div class="decide-dn"><span>DO NOTHING</span><b>${money(doNothingCost, { plus: true })}</b><i>incremental exposure</i></div>
     </header>
     <section class="decision-grid compact-decisions">
       ${rows.map((row, index) => {
         const id = row.intervention.id;
-        return `<article class="decision-card ${index === 0 ? 'best' : ''} ${ctx.state.selectedInterventionId === id ? 'selected' : ''}">
+        const selected = ctx.state.selectedInterventionId === id;
+        return `<article class="decision-card ${index === 0 ? 'best' : ''} ${selected ? 'selected' : ''}" data-decision-card="${id}">
           <div class="card-top"><div class="rank">0${index + 1}</div>${index === 0 ? '<div class="best-badge">BEST ROI</div>' : ''}</div>
           <h2>${INTERVENTION_TITLES[id]}</h2>
           <p>${INTERVENTION_PROPOSALS[id]}</p>
@@ -56,15 +57,54 @@ export function renderIntervene(view, ctx) {
           ${agentPlan(id)}
           <div class="recovery-row"><span>RETAILER SERVICE RECOVERY</span><b>${Math.round(row.recovery * 100)}%</b><i><em style="width:${Math.round(row.recovery * 100)}%"></em></i></div>
           <div class="acts-on">SCHEDULES · ${(INTERVENTION_NODES[id] || []).map(nodeId => NODE_META[nodeId]?.name).join(' → ')}</div>
-          <button class="iv-act-btn" data-act="${id}">SCHEDULE & ACT ▸</button>
+          <button class="iv-act-btn" data-select-intervention="${id}">${selected ? 'SELECTED' : 'SELECT INTERVENTION'}</button>
         </article>`;
       }).join('')}
     </section>
-    <footer class="decide-note">ROI = avoided disruption cost ÷ execution cost · This is the exact AI Agent schedule used in Act.</footer>
+    <footer class="decide-action-bar">
+      <div><span>SELECTED INTERVENTION</span><b id="decide-selection">No intervention selected</b></div>
+      <button id="simulate-selected" disabled>SIMULATE SELECTED</button>
+      <button id="act-selected" disabled>ENACT IN ACT</button>
+    </footer>
   </div>`;
 
+  const selectionLabel = view.querySelector('#decide-selection');
+  const simulateButton = view.querySelector('#simulate-selected');
+  const actButton = view.querySelector('#act-selected');
+
+  const selectIntervention = interventionId => {
+    ctx.selectIntervention(interventionId);
+    view.querySelectorAll('[data-decision-card]').forEach(card => {
+      const selected = card.dataset.decisionCard === interventionId;
+      card.classList.toggle('selected', selected);
+      card.querySelector('[data-select-intervention]').textContent = selected ? 'SELECTED' : 'SELECT INTERVENTION';
+    });
+    selectionLabel.textContent = INTERVENTION_TITLES[interventionId];
+    simulateButton.disabled = false;
+    actButton.disabled = false;
+  };
+
   view.addEventListener('click', eventClick => {
-    const button = eventClick.target.closest('[data-act]');
-    if (button) ctx.gotoTab('act', { eventId: event.id, interventionId: button.dataset.act });
+    const selectButton = eventClick.target.closest('[data-select-intervention]');
+    if (selectButton) selectIntervention(selectButton.dataset.selectIntervention);
   });
+  simulateButton.addEventListener('click', () => {
+    if (!ctx.state.selectedInterventionId) return;
+    ctx.gotoTab('simulate', {
+      eventId: event.id,
+      interventionId: ctx.state.selectedInterventionId,
+      autoRun: true,
+    });
+  });
+  actButton.addEventListener('click', () => {
+    if (!ctx.state.selectedInterventionId) return;
+    ctx.gotoTab('act', {
+      eventId: event.id,
+      interventionId: ctx.state.selectedInterventionId,
+    });
+  });
+
+  if (ctx.state.selectedInterventionId && INTERVENTION_TITLES[ctx.state.selectedInterventionId]) {
+    selectIntervention(ctx.state.selectedInterventionId);
+  }
 }
