@@ -1,7 +1,7 @@
 // App shell: tab routing. Cost cards live inside the Sense/Simulate screens
 // (right rail), computed by the DES engine.
-import { renderSense } from './tabs/sense.js?v=experience6';
-import { renderSimulate } from './tabs/simulate.js?v=experience5';
+import { renderSense } from './tabs/sense.js?v=experience7';
+import { renderSimulate } from './tabs/simulate.js?v=experience7';
 import { renderIntervene } from './tabs/intervene.js?v=experience5';
 import { renderAct } from './tabs/act.js?v=experience5';
 import { EVENTS } from './model.js?v=experience5';

@@ -29,24 +29,23 @@ export function renderSimulate(view, ctx) {
   view.innerHTML = `
     <div class="sim-workspace recovery-workspace">
       <section class="sim-main">
-        <div class="scenario-titlebar">
-          <span class="live-dot"></span>
-          <b>SIMULATE · RESPONSE OPTIONS</b>
-          <i>Choose a response to simulate its node-by-node recovery</i>
-        </div>
         <div class="workspace-graph" id="sim-canvas"></div>
-        <div class="workspace-clock">
-          <span class="mode" id="sim-mode">DISRUPTED NETWORK BASELINE</span>
-          <span class="day" id="sc-day">SELECT AN OPTION</span>
-          <span class="phase active" id="sc-phase">IMPACT CONFIRMED</span>
-          <button id="sc-restart" disabled>RUN AGAIN</button>
-        </div>
       </section>
       <aside class="recovery-rail">
         <div class="recovery-head">
           <span>SIMULATED RESPONSES</span>
           <h1>Choose a recovery option</h1>
           <p>Each option reruns the same 30-day disruption with a different scheduled response.</p>
+        </div>
+        <div class="rail-run-status recovery-run-status">
+          <div class="rail-run-head">
+            <span id="sim-mode">DISRUPTED NETWORK BASELINE</span>
+            <button id="sc-restart" disabled>RUN AGAIN</button>
+          </div>
+          <div class="rail-run-line">
+            <b id="sc-day">SELECT AN OPTION</b>
+            <i class="phase active" id="sc-phase">IMPACT CONFIRMED</i>
+          </div>
         </div>
         <div class="recovery-options">
           ${options.map((option, index) => `

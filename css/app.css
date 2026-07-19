@@ -471,6 +471,16 @@ table.iv-table { width: 100%; border-collapse: collapse; }
 .sense-alert-rail{min-height:0;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 8px 28px rgba(18,32,58,.08)}
 .sense-alert-head{display:flex;justify-content:space-between;padding:15px 17px;border-bottom:1px solid var(--line);font-size:11px;font-weight:800;letter-spacing:1.7px;color:var(--navy)}
 .sense-alert-head b{color:var(--red)}
+.rail-run-status{margin:10px 12px 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.rail-run-head,.rail-run-line{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rail-run-head>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:900;letter-spacing:1.2px;color:var(--teal-dark)}
+.rail-run-head button{flex:0 0 auto;border:1px solid var(--line);border-radius:5px;background:var(--card);padding:5px 8px;font-size:8.5px;font-weight:800;color:var(--navy)}
+.rail-run-head button:disabled{opacity:.45}
+.rail-run-line{margin-top:7px}
+.rail-run-line b{font-size:12px;color:var(--navy-deep)}
+.rail-run-line .phase{padding:4px 7px;border-radius:5px;background:var(--amber-soft);font-size:8.5px;font-style:normal;font-weight:800;color:#a76c16;white-space:nowrap}
+.rail-run-line .phase.pre,.rail-run-line .phase.recovered{background:var(--teal-soft);color:var(--teal-dark)}
+.rail-run-line .phase.active{background:var(--red-soft);color:var(--red)}
 .sense-alert-card{padding:18px}
 .sense-alert-code{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:900;letter-spacing:1.5px;color:#b94d2d}
 .sense-alert-card h1{font-size:21px;line-height:1.2;margin:12px 0 9px;color:var(--navy-deep)}
@@ -511,6 +521,7 @@ table.iv-table { width: 100%; border-collapse: collapse; }
 .recovery-head>span{font-size:10px;font-weight:900;letter-spacing:1.8px;color:var(--teal)}
 .recovery-head h1{font-size:20px;margin:5px 0}
 .recovery-head p{font-size:11px;line-height:1.45;color:var(--muted)}
+.recovery-run-status{margin-bottom:0}
 .recovery-options{padding:9px 11px;display:grid;gap:8px}
 .recovery-option{width:100%;display:grid;grid-template-columns:32px 1fr;gap:10px;text-align:left;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:#f8fafc;color:var(--navy);transition:.2s}
 .recovery-option:hover,.recovery-option.selected{border-color:var(--teal);background:#f0faf8;box-shadow:0 0 0 1px rgba(13,158,140,.18)}
@@ -584,4 +595,73 @@ table.iv-table { width: 100%; border-collapse: collapse; }
   .recovery-metrics{margin-top:5px}
   .compact-decisions .decision-card{padding:12px}
   .decision-agent-plan li{font-size:8.5px}
+}
+
+/* Short desktop viewports: keep every phase inside one Windows-sized screen. */
+@media (max-height:820px) and (min-width:901px){
+  .topbar{height:56px;padding:0 16px;gap:18px}
+  main#view{height:calc(100vh - 56px)}
+  .brand-title{font-size:16px}
+  .brand-sub{font-size:8px}
+  .tab{padding:8px 18px;font-size:10.5px}
+  .alerts-pill{padding:8px 13px;font-size:10.5px}
+
+  .sense-workspace{grid-template-columns:minmax(0,1fr) 340px;padding:8px;gap:8px}
+  .sense-alert-head{padding:10px 14px}
+  .sense-alert-card{padding:12px 14px}
+  .sense-alert-card h1{font-size:18px;margin:8px 0 6px}
+  .sense-cause{margin:10px 0;padding:10px 12px}
+  .sense-cause b{font-size:11.5px}
+  .sense-simulate{min-height:40px}
+  .sense-impact{margin:0 12px 8px;padding:11px}
+  .sense-impact strong{font-size:25px}
+  .sense-impact p{font-size:9px}
+  .sense-rail-note{padding:10px 14px;font-size:9.5px}
+
+  .sim-workspace,.act-workspace{padding:10px;gap:8px}
+  .recovery-workspace{grid-template-columns:minmax(0,1fr) 390px}
+  .recovery-head{padding:10px 13px 8px}
+  .recovery-head h1{font-size:17px;margin:3px 0}
+  .recovery-head p{font-size:9.5px}
+  .rail-run-status{margin:7px 10px 0;padding:7px 10px}
+  .rail-run-line{margin-top:5px}
+  .recovery-options{padding:7px 9px;gap:6px}
+  .recovery-option{grid-template-columns:28px 1fr;gap:7px;padding:8px 9px}
+  .recovery-option p{display:none}
+  .recovery-metrics{margin-top:5px;padding-top:5px}
+  .recovery-outcome{margin:0 9px 7px;padding:9px 11px}
+  .recovery-outcome p{font-size:9px}
+  .recovery-rail .rail-cta{height:40px;flex-basis:40px}
+
+  .decide-viewport{padding:8px;gap:6px}
+  .decide-summary{height:80px;flex-basis:80px;padding:9px 14px}
+  .decide-summary h1{font-size:19px;margin:2px 0}
+  .decide-dn{min-width:175px;padding:7px 11px}
+  .decide-dn b{font-size:22px}
+  .decision-grid.compact-decisions{gap:8px}
+  .compact-decisions .decision-card{padding:10px}
+  .compact-decisions .decision-card h2{font-size:13px;margin:4px 0}
+  .compact-decisions .decision-card>p{font-size:8.5px;line-height:1.3;min-height:34px}
+  .compact-decisions .decision-metrics{margin:6px 0}
+  .compact-decisions .decision-metrics div{padding:6px}
+  .compact-decisions .decision-metrics b{font-size:14px}
+  .decision-agent-plan{margin:4px 0 5px;padding:6px 7px}
+  .decision-agent-plan ul{margin-top:4px;gap:2px}
+  .decision-agent-plan li{font-size:7.3px;line-height:1.15}
+  .decision-agent-plan li b{font-size:7.3px}
+  .recovery-row{margin:3px 0 6px}
+  .compact-decisions .acts-on{min-height:20px}
+  .compact-decisions .iv-act-btn{height:30px;margin-top:5px}
+  .decide-note{height:16px;flex-basis:16px}
+
+  .scenario-titlebar{height:42px;flex-basis:42px}
+  .scenario-titlebar b{font-size:11px}
+  .scenario-titlebar i{font-size:9px}
+  .agent-head{padding:10px 13px 8px}
+  .agent-head h2{font-size:17px;margin:2px 0 7px}
+  .agent-head select{height:34px;font-size:9.5px}
+  .agent-head p{font-size:9px;line-height:1.3;margin-top:5px}
+  .agent-source{margin-top:5px;padding:5px 7px;font-size:8px}
+  .agent-update{min-height:58px;padding:9px 11px}
+  .agent-rail .rail-cta{height:40px;flex-basis:40px}
 }
