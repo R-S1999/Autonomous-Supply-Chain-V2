@@ -60,8 +60,9 @@ export function renderGraph(container, opts = {}) {
   container.appendChild(svg);
 
   const pos = computeLayout();
-  const gEdges = svgEl('g'), gParticles = svgEl('g'), gNodes = svgEl('g'), gTop = svgEl('g');
-  svg.append(gEdges, gParticles, gNodes, gTop);
+  const gEdges = svgEl('g'), gParticles = svgEl('g'), gNodes = svgEl('g');
+  const gTransient = svgEl('g', { class: 'transient-intervention-layer' }), gTop = svgEl('g');
+  svg.append(gEdges, gParticles, gNodes, gTransient, gTop);
 
   /* column headers */
   COLUMNS.forEach((col, i) => {
@@ -287,7 +288,10 @@ export function renderGraph(container, opts = {}) {
       : impact.cost === 0 ? 'NO NET INCREMENTAL COST AT THIS NODE'
       : `${share.toFixed(1)}% OF ${money(impact.total)} NETWORK IMPACT`;
     return `<div class="pop-node-cost ${impact.cost < 0 ? 'offset' : ''}">
-      <span>30-DAY NODE COST IMPACT</span><b>${nodeImpactMoney(impact.cost)}</b><small>${note}</small>
+      <span>30-DAY NODE COST IMPACT</span><b>${nodeImpactMoney(impact.cost)}</b>
+      <div class="pop-cost-components">${(impact.components || []).map(component =>
+        `<p><em>${pretty(component.key)}</em><strong>${nodeImpactMoney(component.value)}</strong></p>`).join('')}</div>
+      <small>${note}</small>
     </div>`;
   }
   function nodeImpactMoney(v) {
@@ -347,6 +351,98 @@ export function renderGraph(container, opts = {}) {
     raf = requestAnimationFrame(tick);
   }
   raf = requestAnimationFrame(tick);
+
+  function renderCompactNodeCosts(map) {
+    nodeCostLayer.innerHTML = '';
+    const wrapR = container.getBoundingClientRect(), placed = [], edge = 8, gap = 12;
+    const overlaps = (a, b, pad = 0) =>
+      a.left < b.right + pad && a.right > b.left - pad && a.top < b.bottom + pad && a.bottom > b.top - pad;
+    const nodeBoxes = Object.fromEntries(Object.entries(nodeEls).map(([id, node]) => {
+      const r = node.querySelector('.node-ring').getBoundingClientRect();
+      return [id, {
+        left: r.left - wrapR.left - 7, right: r.right - wrapR.left + 7,
+        top: r.top - wrapR.top - 7, bottom: r.bottom - wrapR.top + 38,
+      }];
+    }));
+    const entries = Object.entries(map || {}).filter(([, impact]) => Math.abs(impact.cost) >= .5)
+      .sort(([a], [b]) => pos[a].col - pos[b].col || pos[a].y - pos[b].y);
+
+    entries.forEach(([nodeId, impact], index) => {
+      const ring = nodeEls[nodeId]?.querySelector('.node-ring');
+      if (!ring) return;
+      const leader = document.createElement('div');
+      leader.className = `sim-node-cost-leader ${impact.cost < 0 ? 'offset' : ''}`;
+      nodeCostLayer.appendChild(leader);
+
+      const card = document.createElement('div');
+      card.className = `sim-node-cost-card compact ${impact.cost < 0 ? 'offset' : ''}`;
+      card.style.animationDelay = `${index * 90}ms`;
+      card.dataset.node = nodeId;
+      card.innerHTML = `<span>${NODE_META[nodeId]?.name || nodeId}</span><strong>${nodeImpactMoney(impact.cost)}</strong>`;
+      card.setAttribute('aria-label', `${NODE_META[nodeId]?.name || nodeId} cost ${nodeImpactMoney(impact.cost)}. View cost details.`);
+      card.addEventListener('mouseenter', () => {
+        clearTimeout(hideTimer);
+        showPopover(nodeId);
+        nodeEls[nodeId].classList.add('cost-focus');
+      });
+      card.addEventListener('mouseleave', () => {
+        nodeEls[nodeId].classList.remove('cost-focus');
+        if (!pinnedNode) hideTimer = setTimeout(hidePopover, 180);
+      });
+      card.addEventListener('click', ev => {
+        ev.stopPropagation();
+        pinnedNode = nodeId;
+        showPopover(nodeId);
+      });
+      nodeCostLayer.appendChild(card);
+
+      const nodeR = ring.getBoundingClientRect();
+      card.style.left = '0px';
+      card.style.top = '0px';
+      const cardW = card.offsetWidth, height = card.offsetHeight;
+      const nx1 = nodeR.left - wrapR.left, nx2 = nodeR.right - wrapR.left;
+      const ny1 = nodeR.top - wrapR.top, ny2 = nodeR.bottom - wrapR.top;
+      const cx = (nx1 + nx2) / 2, cy = (ny1 + ny2) / 2;
+      const candidates = [
+        { left: nx2 + gap, top: cy - height / 2, side: 'right' },
+        { left: nx1 - cardW - gap, top: cy - height / 2, side: 'left' },
+        { left: cx - cardW / 2, top: ny1 - height - gap, side: 'above' },
+        { left: cx - cardW / 2, top: ny2 + gap, side: 'below' },
+        { left: nx2 + gap, top: ny1 - height - gap, side: 'right' },
+        { left: nx1 - cardW - gap, top: ny1 - height - gap, side: 'left' },
+        { left: nx2 + gap, top: ny2 + gap, side: 'right' },
+        { left: nx1 - cardW - gap, top: ny2 + gap, side: 'left' },
+      ].map(candidate => ({ ...candidate, right: candidate.left + cardW, bottom: candidate.top + height }));
+      const preferred = pos[nodeId].col >= 5 ? 'left'
+        : pos[nodeId].col <= 1 ? 'right'
+          : pos[nodeId].y < VB_H / 2 ? 'below' : 'above';
+      const score = candidate => {
+        let value = Math.hypot((candidate.left + cardW / 2) - cx, (candidate.top + height / 2) - cy);
+        if (candidate.left < edge || candidate.top < edge ||
+          candidate.right > wrapR.width - edge || candidate.bottom > wrapR.height - edge) value += 1e9;
+        value += placed.filter(box => overlaps(candidate, box, 8)).length * 1e8;
+        value += Object.entries(nodeBoxes)
+          .filter(([id, box]) => id !== nodeId && overlaps(candidate, box, 3)).length * 1e5;
+        if (candidate.side !== preferred) value += 1800;
+        return value;
+      };
+      candidates.sort((a, b) => score(a) - score(b));
+      const best = candidates[0];
+      const left = Math.max(edge, Math.min(best.left, wrapR.width - cardW - edge));
+      const top = Math.max(edge, Math.min(best.top, wrapR.height - height - edge));
+      card.style.left = `${left}px`;
+      card.style.top = `${top}px`;
+      card.dataset.side = best.side;
+      placed.push({ left, right: left + cardW, top, bottom: top + height });
+
+      const anchorX = Math.max(left, Math.min(cx, left + cardW));
+      const anchorY = Math.max(top, Math.min(cy, top + height));
+      leader.style.left = `${cx}px`;
+      leader.style.top = `${cy}px`;
+      leader.style.width = `${Math.hypot(anchorX - cx, anchorY - cy)}px`;
+      leader.style.transform = `rotate(${Math.atan2(anchorY - cy, anchorX - cx) * 180 / Math.PI}deg)`;
+    });
+  }
 
   /* ---- public api --------------------------------------------------- */
   const api = {
@@ -445,6 +541,49 @@ export function renderGraph(container, opts = {}) {
       agentActionCard.dataset.side = side;
     },
     clearAgentAction() { agentActionCard.className = 'node-agent-card hidden'; },
+    showTransientIntervention({
+      kind = 'supplier', phase = 'searching', label = 'Searching network',
+      detail = 'Evaluating qualified options', fromNodeId = null,
+      toNodeId = 'inventory_sugar_oils_receiving',
+    } = {}) {
+      gTransient.replaceChildren();
+      const virtual = { x: kind === 'carrier' ? 430 : 520, y: 118, r: 23 };
+      const target = pos[toNodeId];
+      if (!target) return;
+      if (fromNodeId && pos[fromNodeId]) {
+        gTransient.appendChild(svgEl('path', {
+          d: edgePath(pos[fromNodeId], virtual), class: `transient-route ${phase}`,
+        }));
+      }
+      gTransient.appendChild(svgEl('path', {
+        d: edgePath(virtual, target), class: `transient-route ${phase}`,
+      }));
+
+      const group = svgEl('g', {
+        class: `transient-node ${kind} ${phase}`, transform: `translate(${virtual.x} ${virtual.y})`,
+      });
+      const halo = svgEl('circle', { r: 34, class: 'transient-node-halo' });
+      const ring = svgEl('circle', { r: 23, class: 'transient-node-ring' });
+      const dot = svgEl('circle', { r: 6, class: 'transient-node-dot' });
+      const panel = svgEl('rect', { x: 35, y: -34, width: 285, height: 68, rx: 10, class: 'transient-node-panel' });
+      const kicker = svgEl('text', { x: 51, y: -12, class: 'transient-node-kicker' });
+      kicker.textContent = phase === 'searching' ? 'AI AGENT SEARCH'
+        : phase === 'onboarding' ? 'SAP ONBOARDING' : 'ALTERNATE ROUTE';
+      const title = svgEl('text', { x: 51, y: 9, class: 'transient-node-title' });
+      title.textContent = label;
+      const status = svgEl('text', { x: 51, y: 26, class: 'transient-node-status' });
+      status.textContent = detail;
+      group.append(halo, ring, dot, panel, kicker, title, status);
+      if (phase === 'searching') {
+        group.append(
+          svgEl('circle', { cx: -48, cy: -18, r: 7, class: 'transient-candidate one' }),
+          svgEl('circle', { cx: -48, cy: 18, r: 7, class: 'transient-candidate two' }),
+          svgEl('circle', { cx: -70, cy: 0, r: 7, class: 'transient-candidate three' }),
+        );
+      }
+      gTransient.appendChild(group);
+    },
+    clearTransientIntervention() { gTransient.replaceChildren(); },
     pulseNode(nodeId) {
       const g = nodeEls[nodeId];
       if (!g) return;
@@ -456,6 +595,8 @@ export function renderGraph(container, opts = {}) {
     setCompare(map) { compareMap = map; if (pinnedNode) showPopover(pinnedNode); },
     setNodeCosts(map) { nodeCostMap = map; if (pinnedNode) showPopover(pinnedNode); },
     showNodeCostCards(map) {
+      renderCompactNodeCosts(map);
+      return;
       nodeCostLayer.innerHTML = '';
       const wrapR = container.getBoundingClientRect(), placed = [], edge = 7, gap = 13;
       const nodeBoxes = Object.values(nodeEls).map(node => {

@@ -1,14 +1,62 @@
-import { renderGraph } from '../graph.js?v=experience5';
+import { renderGraph } from '../graph.js?v=experience11';
 import {
   EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_TITLES,
   INTERVENTION_AGENT_STEPS, NODE_META, money,
-} from '../model.js?v=experience5';
+} from '../model.js?v=experience11';
 import { runBau, runScenario } from '../engine.js?v=costledger';
-import { disruptionSummary } from '../scenario.js?v=experience5';
+import { disruptionSummary } from '../scenario.js?v=experience11';
 
 const STEP_INTERVAL_MS = 5200;
 const PROCESSING_MS = 1500;
 const FINAL_STEP_HOLD_MS = 4700;
+
+function transientVisual(interventionId, index, completed) {
+  if (interventionId === 'source_emergency_oil_supply') {
+    if (index === 0) return completed
+      ? {
+        kind: 'supplier', phase: 'selected', label: 'Emergency Oil Supplier 14',
+        detail: 'Qualified lot selected for tomorrow', toNodeId: 'inventory_sugar_oils_receiving',
+      }
+      : {
+        kind: 'supplier', phase: 'searching', label: 'Qualified oil supplier search',
+        detail: 'Comparing lots and delivery times', toNodeId: 'inventory_sugar_oils_receiving',
+      };
+    if (index === 1) return completed
+      ? {
+        kind: 'supplier', phase: 'routed', label: 'Emergency Oil Supplier 14',
+        detail: 'SAP vendor and emergency route committed', toNodeId: 'inventory_sugar_oils_receiving',
+      }
+      : {
+        kind: 'supplier', phase: 'onboarding', label: 'Emergency Oil Supplier 14',
+        detail: 'Creating SAP vendor and purchase order', toNodeId: 'inventory_sugar_oils_receiving',
+      };
+  }
+  if (interventionId === 'expedite_delayed_oil_tanker') {
+    if (index === 0) return completed
+      ? {
+        kind: 'carrier', phase: 'selected', label: 'Team-driver Tanker 27',
+        detail: 'Fastest qualified service selected', fromNodeId: 'supplier_oils_fats_regional',
+        toNodeId: 'inventory_sugar_oils_receiving',
+      }
+      : {
+        kind: 'carrier', phase: 'searching', label: 'Team-driver service search',
+        detail: 'Comparing capacity and recovery time', fromNodeId: 'supplier_oils_fats_regional',
+        toNodeId: 'inventory_sugar_oils_receiving',
+      };
+    if (index === 1) return completed
+      ? {
+        kind: 'carrier', phase: 'routed', label: 'Team-driver Tanker 27',
+        detail: 'Alternate tanker route committed', fromNodeId: 'supplier_oils_fats_regional',
+        toNodeId: 'inventory_sugar_oils_receiving',
+      }
+      : {
+        kind: 'carrier', phase: 'onboarding', label: 'Team-driver Tanker 27',
+        detail: 'Writing carrier and ETA into SAP', fromNodeId: 'supplier_oils_fats_regional',
+        toNodeId: 'inventory_sugar_oils_receiving',
+      };
+  }
+  return null;
+}
 
 function economics(event, interventionId) {
   const bau = runBau().frames[29];
@@ -126,16 +174,18 @@ export function renderAct(view, ctx) {
   const resetDisruptedNetwork = () => {
     graph.setFrame(disrupted.frame);
     graph.setEdgeAlert('rel_oils_to_sugar_oils_inventory', 'OUTBOUND DELAY');
+    graph.clearTransientIntervention();
   };
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
   const currentIntervention = () => event.candidate_interventions.find(intervention => intervention.id === select.value);
 
   function renderSteps(steps) {
     line.innerHTML = steps.map((step, index) => `<div class="agent-step" data-i="${index}"><i></i><div><b>${step[1]} · ${NODE_META[step[0]]?.name || step[0]}</b><span>WAITING TO BE SCHEDULED</span></div></div>`).join('');
+    line.style.setProperty('--agent-step-count', steps.length);
     dot.style.top = '8px';
   }
 
-  function animate(steps, generatedByAgent) {
+  function animate(intervention, steps, generatedByAgent) {
     button.disabled = true;
     button.textContent = 'AI AGENT ACTING';
     graph.clearAgentAction();
@@ -149,6 +199,9 @@ export function renderAct(view, ctx) {
       graph.setAgentBadge(step[0]);
       graph.pulseNode(step[0]);
       graph.showAgentAction(step[0], step[1], '', 'processing');
+      const processingVisual = transientVisual(intervention.id, index, false);
+      if (processingVisual) graph.showTransientIntervention(processingVisual);
+      else if (index >= 2) graph.clearTransientIntervention();
       update.innerHTML = `<b>AI AGENT SCHEDULING · ${step[1]}</b><span>Connecting to ${step[1]} at ${NODE_META[step[0]]?.name || step[0]}…</span>`;
 
       timers.push(setTimeout(() => {
@@ -156,6 +209,8 @@ export function renderAct(view, ctx) {
         status.textContent = `${actionSource} ACTION SCHEDULED`;
         graph.showAgentAction(step[0], step[1], step[2], 'revealed', actionSource);
         graph.setNodeHealth(step[0], 'good');
+        const completedVisual = transientVisual(intervention.id, index, true);
+        if (completedVisual) graph.showTransientIntervention(completedVisual);
         update.innerHTML = `<b>${step[1]} ACTION SCHEDULED</b><span>${NODE_META[step[0]]?.name || step[0]} is recovering. The generated action remains visible before the next step.</span>`;
       }, PROCESSING_MS));
 
@@ -164,6 +219,7 @@ export function renderAct(view, ctx) {
         for (const nodeId of event.affected_model_objects?.nodes || []) graph.setNodeHealth(nodeId, 'good');
         for (const edgeId of event.affected_model_objects?.relationships || []) graph.setEdgeState(edgeId, 'flow');
         graph.clearEdgeAlert();
+        graph.clearTransientIntervention();
         update.innerHTML = '<b>INTERVENTION SCHEDULED</b><span>All enterprise actions are committed. The disrupted supply chain has recovered to green.</span>';
         button.disabled = false;
         button.textContent = 'REGENERATE & RUN ↻';
@@ -202,7 +258,7 @@ export function renderAct(view, ctx) {
     }
     renderSteps(steps);
     update.innerHTML = '<b>TIME TO ACT</b><span>Enterprise connections validated. Beginning the scheduled intervention.</span>';
-    animate(steps, generatedByAgent);
+    animate(intervention, steps, generatedByAgent);
   }
 
   select.addEventListener('change', generateAndRun);

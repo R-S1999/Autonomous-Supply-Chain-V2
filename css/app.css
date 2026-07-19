@@ -665,3 +665,85 @@ table.iv-table { width: 100%; border-collapse: collapse; }
   .agent-update{min-height:58px;padding:9px 11px}
   .agent-rail .rail-cta{height:40px;flex-basis:40px}
 }
+
+/* ===== Experience 9: anchored economics and staged intervention theatre ===== */
+.sense-discovery{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center}
+.sense-discovery.hidden,.sense-alert-content.hidden{display:none}
+.sense-discovery h1{margin:9px 0 8px;font-size:22px;color:var(--navy-deep)}
+.sense-discovery p{max-width:300px;font-size:11px;line-height:1.55;color:var(--muted)}
+.sense-discovery .sense-simulate{margin-top:22px;max-width:300px}
+.sense-radar{position:relative;width:88px;height:88px;margin-bottom:20px;border:1px solid rgba(13,158,140,.25);border-radius:50%;background:radial-gradient(circle,rgba(13,158,140,.14) 0 6px,transparent 7px)}
+.sense-radar:before,.sense-radar:after{content:'';position:absolute;inset:14px;border:1px solid rgba(13,158,140,.22);border-radius:50%}
+.sense-radar:after{inset:29px}
+.sense-radar i{position:absolute;left:50%;top:50%;width:50%;height:1px;background:linear-gradient(90deg,var(--teal),transparent);transform-origin:left center;animation:senseSweep 2.2s linear infinite}
+.sense-radar i:nth-child(2){animation-delay:-1.1s;opacity:.35}
+.sense-radar span{position:absolute;right:19px;top:24px;width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 6px rgba(227,154,45,.15);animation:blink 1.2s infinite}
+@keyframes senseSweep{to{transform:rotate(360deg)}}
+.sense-alert-content{flex:1;min-height:0;display:flex;flex-direction:column}
+.sense-alert-content.revealed .sense-alert-card{animation:alertArrival .55s cubic-bezier(.2,.75,.25,1) both}
+.sense-alert-content.revealed .sense-alert-code{animation:alertAttention 1.1s ease 2}
+.alert-blink{animation:alertAttention 1.1s ease 2}
+@keyframes alertArrival{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+@keyframes alertAttention{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 6px rgba(217,79,79,.14)}}
+
+.sim-node-cost-layer{pointer-events:none}
+.sim-node-cost-card.compact{z-index:2;width:150px;padding:9px 10px;border-color:rgba(92,226,199,.55);pointer-events:auto;cursor:pointer}
+.sim-node-cost-card.compact:before{display:none}
+.sim-node-cost-card.compact>span{display:-webkit-box;min-height:19px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:8px;line-height:1.2;letter-spacing:.4px}
+.sim-node-cost-card.compact>strong{display:block;margin:4px 0 0;font-size:18px;line-height:1}
+.sim-node-cost-card.compact:hover{border-color:#78e3d0;box-shadow:0 10px 28px rgba(18,32,58,.34),0 0 0 2px rgba(13,158,140,.16)}
+.sim-node-cost-leader{position:absolute;z-index:1;height:2px;background:rgba(18,32,58,.68);transform-origin:left center;pointer-events:none}
+.sim-node-cost-leader:before{content:'';position:absolute;left:-3px;top:-2px;width:6px;height:6px;border-radius:50%;background:var(--navy-deep);box-shadow:0 0 0 4px rgba(18,32,58,.12)}
+.sim-node-cost-leader.offset{background:rgba(227,154,45,.8)}
+.sim-node-cost-leader.offset:before{background:var(--amber)}
+.node.cost-focus .node-halo{opacity:.8;stroke-width:3}
+.pop-cost-components{margin:8px 0 7px;padding:7px 0;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
+.pop-cost-components p{display:flex;justify-content:space-between;gap:10px;margin-top:4px}
+.pop-cost-components em{font-size:9px;font-style:normal;color:#bdc9da}
+.pop-cost-components strong{font-size:9px;color:#fff}
+
+.recovery-stage{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.recovery-stage>span{display:flex;justify-content:space-between;gap:8px;font-size:7.5px;font-weight:800;letter-spacing:.6px}
+.recovery-stage>span i{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:normal;color:var(--teal-dark)}
+.recovery-stage>span b{white-space:nowrap;color:var(--navy)}
+.recovery-stage>em{display:block;height:4px;margin-top:6px;overflow:hidden;border-radius:4px;background:#dce4ea}
+.recovery-stage>em i{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--amber),var(--teal));transition:width .5s ease}
+
+.agent-steps{grid-template-rows:repeat(var(--agent-step-count,5),minmax(0,1fr))}
+.agent-step b{font-size:10.5px}
+.agent-step span{font-size:9.5px}
+
+.transient-route{fill:none;stroke:#10ae98;stroke-width:4;stroke-dasharray:10 8;opacity:.9;filter:drop-shadow(0 0 5px rgba(13,158,140,.34));animation:transientRoute 1.1s linear infinite}
+.transient-route.searching{stroke:var(--amber);opacity:.55}
+.transient-route.onboarding{stroke:#5b8fd8}
+@keyframes transientRoute{to{stroke-dashoffset:-36}}
+.transient-node{filter:drop-shadow(0 10px 12px rgba(18,32,58,.22));animation:transientNodeIn .35s ease both}
+@keyframes transientNodeIn{from{opacity:0}to{opacity:1}}
+.transient-node-ring{fill:#fff;stroke:#10ae98;stroke-width:4}
+.transient-node-dot{fill:#10ae98}
+.transient-node-halo{fill:none;stroke:#10ae98;stroke-width:2;opacity:.28;animation:transientHalo 1.3s ease infinite}
+.transient-node.searching .transient-node-ring,.transient-node.searching .transient-node-halo{stroke:var(--amber)}
+.transient-node.searching .transient-node-dot{fill:var(--amber)}
+.transient-node.onboarding .transient-node-ring,.transient-node.onboarding .transient-node-halo{stroke:#5b8fd8}
+.transient-node.onboarding .transient-node-dot{fill:#5b8fd8}
+@keyframes transientHalo{50%{r:40;opacity:.08}}
+.transient-node-panel{fill:rgba(18,32,58,.97);stroke:rgba(101,221,200,.55);stroke-width:1.5}
+.transient-node-kicker{fill:#73ddcb;font-size:10px;font-weight:900;letter-spacing:1.4px}
+.transient-node-title{fill:#fff;font-size:15px;font-weight:900}
+.transient-node-status{fill:#bdc9da;font-size:10px}
+.transient-candidate{fill:#fff;stroke:var(--amber);stroke-width:3;animation:transientCandidate 1s ease infinite}
+.transient-candidate.two{animation-delay:.18s}.transient-candidate.three{animation-delay:.36s}
+@keyframes transientCandidate{50%{opacity:.25}}
+
+@media (max-height:820px) and (min-width:901px){
+  .sense-discovery{padding:18px}
+  .sense-radar{width:72px;height:72px;margin-bottom:14px}
+  .sense-discovery h1{font-size:19px}
+  .sense-discovery .sense-simulate{margin-top:16px}
+  .sim-node-cost-card.compact{width:124px;padding:7px 8px}
+  .sim-node-cost-card.compact>span{min-height:17px;font-size:7px}
+  .sim-node-cost-card.compact>strong{font-size:15px}
+  .recovery-stage{margin-top:6px;padding-top:6px}
+  .agent-step b{font-size:9.5px}
+  .agent-step span{font-size:8.5px}
+}
