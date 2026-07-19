@@ -747,3 +747,17 @@ table.iv-table { width: 100%; border-collapse: collapse; }
   .agent-step b{font-size:9.5px}
   .agent-step span{font-size:8.5px}
 }
+
+/* Keep the live Act callout subordinate to the network and right-hand agent rail. */
+.node-agent-card{padding:10px 11px 11px}
+.node-agent-head{gap:6px;font-size:8px;letter-spacing:.9px}
+.node-agent-card strong{margin-top:6px;font-size:11px}
+.node-agent-card p{margin-top:4px;font-size:9px;line-height:1.45}
+.node-agent-spinner{width:9px;height:9px;flex-basis:9px}
+
+@media (max-height:820px) and (min-width:901px){
+  .node-agent-card{padding:8px 9px 9px}
+  .node-agent-head{font-size:7.5px}
+  .node-agent-card strong{font-size:10px}
+  .node-agent-card p{font-size:8px;line-height:1.4}
+}

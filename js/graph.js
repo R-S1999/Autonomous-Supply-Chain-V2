@@ -527,7 +527,7 @@ export function renderGraph(container, opts = {}) {
         ? `Connecting to ${system} and processing the next enterprise action…` : message;
 
       const wrapR = container.getBoundingClientRect(), nodeR = ring.getBoundingClientRect();
-      const cardW = Math.min(310, wrapR.width - 24);
+      const cardW = Math.min(240, wrapR.width - 24);
       let left = nodeR.right - wrapR.left + 18, side = 'right';
       if (left + cardW > wrapR.width - 10) {
         left = nodeR.left - wrapR.left - cardW - 18;
