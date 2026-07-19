@@ -1,6 +1,6 @@
 // App shell: tab routing. Cost cards live inside the Sense/Simulate screens
 // (right rail), computed by the DES engine.
-import { renderSense } from './tabs/sense.js?v=experience5';
+import { renderSense } from './tabs/sense.js?v=experience6';
 import { renderSimulate } from './tabs/simulate.js?v=experience5';
 import { renderIntervene } from './tabs/intervene.js?v=experience5';
 import { renderAct } from './tabs/act.js?v=experience5';
@@ -10,7 +10,7 @@ const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 document.getElementById('alerts-count').textContent = EVENTS.length;
 
-const state = { selectedEventId: null, selectedInterventionId: null, senseAlertsVisible: false };
+const state = { selectedEventId: null, selectedInterventionId: null };
 let destroyCurrent = null;
 let activeTab = null;
 
@@ -37,11 +37,9 @@ function switchTab(name) {
 tabbar.addEventListener('click', (e) => {
   const b = e.target.closest('.tab');
   if (!b) return;
-  if (b.dataset.tab === 'sense') state.senseAlertsVisible = true;
   if (b.dataset.tab !== activeTab || b.dataset.tab === 'sense') switchTab(b.dataset.tab);
 });
 document.getElementById('alerts-pill').addEventListener('click', () => {
-  state.senseAlertsVisible = true;
   switchTab('sense');
 });
 

@@ -466,10 +466,8 @@ table.iv-table { width: 100%; border-collapse: collapse; }
 .lane-alert-focus{stroke:#d85e36!important;stroke-width:4!important;stroke-dasharray:8 5!important;opacity:1!important;filter:drop-shadow(0 0 5px rgba(216,94,54,.5))}
 
 /* Sense: clean network by default; alert and disruption economics on demand. */
-.sense-workspace{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px;padding:14px;overflow:hidden;background:var(--bg)}
-.sense-workspace.network-only{grid-template-columns:minmax(0,1fr)}
-.sense-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
-.sense-titlebar .live-dot{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 5px rgba(13,158,140,.12)}
+.sense-workspace{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:10px;padding:10px;overflow:hidden;background:var(--bg)}
+.sense-main{min-width:0;min-height:0;display:flex}
 .sense-alert-rail{min-height:0;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 8px 28px rgba(18,32,58,.08)}
 .sense-alert-head{display:flex;justify-content:space-between;padding:15px 17px;border-bottom:1px solid var(--line);font-size:11px;font-weight:800;letter-spacing:1.7px;color:var(--navy)}
 .sense-alert-head b{color:var(--red)}
@@ -489,10 +487,6 @@ table.iv-table { width: 100%; border-collapse: collapse; }
 .sense-impact strong{display:block;margin:5px 0;font-size:30px;color:#fff}
 .sense-impact p{font-size:11px;line-height:1.5;color:#c0cada}
 .sense-rail-note{margin-top:auto;padding:14px 17px;border-top:1px solid var(--line);font-size:11px;line-height:1.55;color:#67738a}
-.sense-clock .mode{font-size:11px}
-.sense-clock .day{font-size:11px}
-.sense-clock .phase{font-size:10px}
-.sense-clock button{font-size:10px}
 
 /* Larger cost and KPI cards. */
 .sim-node-cost-card{padding:11px 12px;border-radius:9px}
