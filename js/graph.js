@@ -12,6 +12,7 @@ const COL_X = [85, 290, 495, 700, 905, 1110, 1330];
 const COL_R = [18, 20, 22, 26, 20, 22, 23];
 const BOUNDARY_X = 1218;
 const NS = 'http://www.w3.org/2000/svg';
+const HIDDEN_NODE_IDS = new Set(['supplier_film_wrap_converter']);
 
 function svgEl(tag, attrs = {}) {
   const el = document.createElementNS(NS, tag);
@@ -23,6 +24,7 @@ function svgEl(tag, attrs = {}) {
 export function computeLayout() {
   const byCol = COLUMNS.map(() => []);
   for (const node of BAU_GRAPH.nodes) {
+    if (HIDDEN_NODE_IDS.has(node.id)) continue;
     const c = columnOf(node);
     if (c >= 0) byCol[c].push(node);
   }
@@ -114,6 +116,7 @@ export function renderGraph(container, opts = {}) {
   /* nodes */
   const nodeEls = {};
   for (const node of BAU_GRAPH.nodes) {
+    if (HIDDEN_NODE_IDS.has(node.id)) continue;
     const p = pos[node.id];
     if (!p) continue;
     const g = svgEl('g', { class: 'node h-good', 'data-id': node.id, transform: `translate(${p.x} ${p.y})` });
@@ -547,9 +550,20 @@ export function renderGraph(container, opts = {}) {
       toNodeId = 'inventory_sugar_oils_receiving',
     } = {}) {
       gTransient.replaceChildren();
-      const virtual = { x: kind === 'carrier' ? 430 : 520, y: 118, r: 23 };
       const target = pos[toNodeId];
       if (!target) return;
+      const source = fromNodeId ? pos[fromNodeId] : null;
+      const virtual = kind === 'carrier' && source
+        ? {
+          x: (source.x + target.x) / 2,
+          y: Math.max(120, (source.y + target.y) / 2 - 76),
+          r: 23,
+        }
+        : {
+          x: target.x + 100,
+          y: VB_H - 40,
+          r: 23,
+        };
       if (fromNodeId && pos[fromNodeId]) {
         gTransient.appendChild(svgEl('path', {
           d: edgePath(pos[fromNodeId], virtual), class: `transient-route ${phase}`,
@@ -562,16 +576,17 @@ export function renderGraph(container, opts = {}) {
       const group = svgEl('g', {
         class: `transient-node ${kind} ${phase}`, transform: `translate(${virtual.x} ${virtual.y})`,
       });
+      const panelY = kind === 'supplier' ? -96 : -34;
       const halo = svgEl('circle', { r: 34, class: 'transient-node-halo' });
       const ring = svgEl('circle', { r: 23, class: 'transient-node-ring' });
       const dot = svgEl('circle', { r: 6, class: 'transient-node-dot' });
-      const panel = svgEl('rect', { x: 35, y: -34, width: 285, height: 68, rx: 10, class: 'transient-node-panel' });
-      const kicker = svgEl('text', { x: 51, y: -12, class: 'transient-node-kicker' });
+      const panel = svgEl('rect', { x: 35, y: panelY, width: 285, height: 68, rx: 10, class: 'transient-node-panel' });
+      const kicker = svgEl('text', { x: 51, y: panelY + 22, class: 'transient-node-kicker' });
       kicker.textContent = phase === 'searching' ? 'AI AGENT SEARCH'
         : phase === 'onboarding' ? 'SAP ONBOARDING' : 'ALTERNATE ROUTE';
-      const title = svgEl('text', { x: 51, y: 9, class: 'transient-node-title' });
+      const title = svgEl('text', { x: 51, y: panelY + 43, class: 'transient-node-title' });
       title.textContent = label;
-      const status = svgEl('text', { x: 51, y: 26, class: 'transient-node-status' });
+      const status = svgEl('text', { x: 51, y: panelY + 60, class: 'transient-node-status' });
       status.textContent = detail;
       group.append(halo, ring, dot, panel, kicker, title, status);
       if (phase === 'searching') {

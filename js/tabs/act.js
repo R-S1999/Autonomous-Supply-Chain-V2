@@ -1,4 +1,4 @@
-import { renderGraph } from '../graph.js?v=experience12';
+import { renderGraph } from '../graph.js?v=experience16';
 import {
   EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_TITLES,
   INTERVENTION_AGENT_STEPS, NODE_META, money,
@@ -198,19 +198,27 @@ export function renderAct(view, ctx) {
       dot.style.top = `${index * (100 / Math.max(1, steps.length - 1))}%`;
       graph.setAgentBadge(step[0]);
       graph.pulseNode(step[0]);
-      graph.showAgentAction(step[0], step[1], '', 'processing');
       const processingVisual = transientVisual(intervention.id, index, false);
-      if (processingVisual) graph.showTransientIntervention(processingVisual);
-      else if (index >= 2) graph.clearTransientIntervention();
+      if (processingVisual) {
+        graph.clearAgentAction();
+        graph.showTransientIntervention(processingVisual);
+      } else {
+        graph.clearTransientIntervention();
+        graph.showAgentAction(step[0], step[1], '', 'processing');
+      }
       update.innerHTML = `<b>AI AGENT SCHEDULING · ${step[1]}</b><span>Connecting to ${step[1]} at ${NODE_META[step[0]]?.name || step[0]}…</span>`;
 
       timers.push(setTimeout(() => {
         const actionSource = generatedByAgent ? 'AI AGENT' : 'FALLBACK';
         status.textContent = `${actionSource} ACTION SCHEDULED`;
-        graph.showAgentAction(step[0], step[1], step[2], 'revealed', actionSource);
         graph.setNodeHealth(step[0], 'good');
         const completedVisual = transientVisual(intervention.id, index, true);
-        if (completedVisual) graph.showTransientIntervention(completedVisual);
+        if (completedVisual) {
+          graph.clearAgentAction();
+          graph.showTransientIntervention(completedVisual);
+        } else {
+          graph.showAgentAction(step[0], step[1], step[2], 'revealed', actionSource);
+        }
         update.innerHTML = `<b>${step[1]} ACTION SCHEDULED</b><span>${NODE_META[step[0]]?.name || step[0]} is recovering. The generated action remains visible before the next step.</span>`;
       }, PROCESSING_MS));
 
