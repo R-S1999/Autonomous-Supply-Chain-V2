@@ -870,3 +870,102 @@ h1,h2,h3,.brand-title,.cost-main,.decision-metrics b,.recovery-option h2,.recove
   .summary-savings-ring b{font-size:21px}
   .summary-avoided strong{font-size:27px}
 }
+
+/* Summary v2: one dominant service story with node-level recovery evidence. */
+.summary-v2{height:100%;padding:10px;display:flex;flex-direction:column;gap:9px;overflow:hidden;background:#edf2f5}
+.summary-v2-head{height:106px;flex:0 0 106px;display:grid;grid-template-columns:minmax(0,.95fr) minmax(410px,1.15fr) 230px;gap:24px;align-items:center;padding:15px 21px;border-radius:11px;background:linear-gradient(118deg,#101d35 0%,#152a49 72%,#0b766c 145%);color:#fff;box-shadow:0 10px 30px rgba(18,32,58,.14)}
+.summary-v2-head>div{min-width:0}
+.summary-v2-head span,.summary-service-panel header>div>span,.service-lift-block>span,.node-lift-block header span{font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:1.5px;color:#63d5c1}
+.summary-v2-head h1{margin:5px 0 4px;font-family:var(--display);font-size:24px;line-height:1.08;color:#fff}
+.summary-v2-head p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;color:#b9c5d7}
+.summary-v2-method{padding-left:20px;border-left:2px solid #35bca8}
+.summary-v2-method h2{margin:5px 0 4px;font-family:var(--display);font-size:17px;color:#fff}
+.summary-v2-economics{display:grid;grid-template-columns:.8fr 1.2fr;gap:10px}
+.summary-v2-economics>div{padding:10px 11px;border:1px solid rgba(255,255,255,.14);border-radius:7px;background:rgba(255,255,255,.07)}
+.summary-v2-economics span{display:block;font-size:7px;color:#aab9cd}
+.summary-v2-economics b{display:block;margin-top:3px;font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums}
+.summary-v2-economics>div:last-child b{color:#64dfc9}
+.summary-v2-economics em{display:block;margin-top:2px;font-size:8px;font-style:normal;color:#aab9cd}
+.summary-v2-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 425px;gap:9px}
+.summary-service-panel,.service-lift-block,.node-lift-block{min-height:0;background:var(--card);border:1px solid #dce3e9;border-radius:10px;box-shadow:0 8px 24px rgba(18,32,58,.05)}
+.summary-service-panel{padding:16px 18px;overflow:hidden}
+.summary-service-panel>header{height:70px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.summary-service-panel header h2{margin:4px 0 3px;font-family:var(--display);font-size:18px;color:var(--navy-deep)}
+.summary-service-panel header p{font-size:10px;color:#6c788b}
+.service-legend{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;font-size:9.5px;color:#5e6b7e}
+.service-legend i{width:18px;height:3px;margin-left:9px;border-radius:2px;background:var(--navy-deep)}
+.service-legend i.baseline{height:2px;background:repeating-linear-gradient(90deg,#53637a 0 5px,transparent 5px 8px)}
+.service-legend i.disrupted{background:var(--red)}
+.service-legend i.response{background:var(--teal)}
+.summary-service-svg{display:block;width:100%;height:calc(100% - 70px);overflow:visible}
+.service-window{fill:rgba(217,79,79,.055)}
+.service-grid line{stroke:#dfe5ea;stroke-width:1}
+.service-grid text,.service-axis-labels text{fill:#79869a;font-family:var(--mono);font-size:9px}
+.service-gap-area{fill:rgba(217,79,79,.11)}
+.service-line{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.service-line.baseline{stroke:#4a5c74;stroke-width:2;stroke-dasharray:7 6}
+.service-line.disrupted{stroke:var(--red);stroke-width:4}
+.service-line.response{stroke:var(--teal);stroke-width:5}
+.service-worst-point circle{fill:#fff;stroke:var(--red);stroke-width:5}
+.service-response-point circle{fill:#fff;stroke:var(--teal);stroke-width:5}
+.service-worst-point text,.service-response-point text{font-family:var(--sans);font-size:10px;font-weight:800;fill:var(--navy-deep)}
+.service-lift-annotation line{stroke:var(--navy-deep);stroke-width:1.8}
+.service-lift-annotation rect{fill:var(--navy-deep)}
+.service-lift-annotation text{fill:#fff;font-family:var(--display);font-size:14px;font-weight:800}
+.service-lift-annotation text.sub{font-family:var(--mono);font-size:7px;font-weight:700;letter-spacing:.7px;fill:#9de2d6}
+.summary-insight-rail{min-height:0;display:flex;flex-direction:column;gap:8px}
+.service-lift-block{flex:0 0 196px;padding:15px 16px;border-top:4px solid var(--teal)}
+.service-lift-block>div:first-of-type{display:flex;align-items:baseline;gap:9px;margin-top:4px}
+.service-lift-block strong{font-family:var(--display);font-size:39px;line-height:1;color:var(--teal-dark);font-variant-numeric:tabular-nums}
+.service-lift-block>div:first-of-type em{font-size:10px;font-style:normal;color:#657187}
+.service-lift-block>p{margin-top:4px;font-size:10px;color:#657187}
+.service-scenario-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:11px;background:#dfe5ea}
+.service-scenario-strip>div{padding:8px;background:#f5f7f9}
+.service-scenario-strip span{display:block;font-family:var(--mono);font-size:6.8px;font-weight:800;letter-spacing:.65px;color:#7d8899}
+.service-scenario-strip b{display:block;margin-top:3px;font-family:var(--display);font-size:15px}
+.service-scenario-strip>div:nth-child(2) b{color:var(--red)}
+.service-scenario-strip>div:nth-child(3) b{color:var(--teal-dark)}
+.service-days{display:flex;align-items:center;gap:5px;margin-top:9px;font-size:8.5px;color:#6c788b}
+.service-days b{font-family:var(--display);font-size:14px;color:var(--navy-deep)}
+.service-days i{width:1px;height:14px;margin:0 4px;background:#d5dce3}
+.node-lift-block{flex:1;display:flex;flex-direction:column;padding:13px 14px;overflow:hidden}
+.node-lift-block>header{height:42px;flex:0 0 42px}
+.node-lift-block header h2{margin-top:2px;font-family:var(--display);font-size:15px}
+.node-lift-list{flex:1;min-height:0;display:grid;grid-template-rows:repeat(4,minmax(0,1fr));gap:5px}
+.node-lift-row{position:relative;min-height:0;padding:8px 10px;border-radius:6px;background:#f4f7f8;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;align-content:center}
+.node-lift-name{min-width:0}
+.node-lift-name b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--navy-deep)}
+.node-lift-name span{display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:7.2px;text-transform:uppercase;letter-spacing:.45px;color:#7e8999}
+.node-lift-row>em{align-self:start;padding:3px 6px;border-radius:10px;background:#dff3ef;font-family:var(--mono);font-size:7px;font-style:normal;font-weight:800;color:var(--teal-dark)}
+.node-lift-values{grid-column:1/-1;display:grid;grid-template-columns:1fr 12px 1fr;align-items:end;gap:5px}
+.node-lift-values span{min-width:0}
+.node-lift-values small{display:block;font-family:var(--mono);font-size:6.3px;letter-spacing:.55px;color:#8993a2}
+.node-lift-values b{display:block;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--display);font-size:12px;color:var(--red)}
+.node-lift-values .after b{color:var(--teal-dark)}
+.node-lift-values>i{font-size:11px;font-style:normal;color:#94a0b0}
+.node-lift-empty{display:grid;place-items:center;height:100%;padding:20px;text-align:center;font-size:10px;color:#7d8899}
+
+@media (max-height:820px) and (min-width:901px){
+  .summary-v2{padding:8px;gap:7px}
+  .summary-v2-head{height:90px;flex-basis:90px;grid-template-columns:minmax(0,.95fr) minmax(380px,1.15fr) 220px;gap:17px;padding:10px 16px}
+  .summary-v2-head h1{font-size:20px;margin:3px 0}
+  .summary-v2-head p{font-size:9px}
+  .summary-v2-method h2{font-size:14px;margin:3px 0}
+  .summary-v2-economics>div{padding:7px 8px}
+  .summary-v2-economics b{font-size:17px}
+  .summary-v2-body{grid-template-columns:minmax(0,1fr) 400px;gap:7px}
+  .summary-service-panel{padding:11px 13px}
+  .summary-service-panel>header{height:57px}
+  .summary-service-panel header h2{font-size:15px}
+  .summary-service-svg{height:calc(100% - 57px)}
+  .service-lift-block{flex-basis:174px;padding:11px 13px}
+  .service-lift-block strong{font-size:33px}
+  .service-scenario-strip{margin-top:8px}
+  .service-scenario-strip>div{padding:6px}
+  .service-days{margin-top:6px}
+  .node-lift-block{padding:9px 10px}
+  .node-lift-block>header{height:46px;flex-basis:46px}
+  .node-lift-row{padding:6px 8px}
+  .node-lift-name b{font-size:9.3px}
+  .node-lift-values b{font-size:11px}
+}

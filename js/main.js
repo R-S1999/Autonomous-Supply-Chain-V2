@@ -4,7 +4,7 @@ import { renderSense } from './tabs/sense.js?v=experience13';
 import { renderSimulate } from './tabs/simulate.js?v=experience17';
 import { renderIntervene } from './tabs/intervene.js?v=experience17';
 import { renderAct } from './tabs/act.js?v=experience18';
-import { renderSummary } from './tabs/summary.js?v=experience18';
+import { renderSummary } from './tabs/summary.js?v=experience21';
 import { EVENTS } from './model.js?v=experience11';
 
 const view = document.getElementById('view');
