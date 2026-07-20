@@ -1,4 +1,4 @@
-import { renderGraph } from '../graph.js?v=experience16';
+import { renderGraph } from '../graph.js?v=experience18';
 import {
   EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_TITLES,
   INTERVENTION_AGENT_STEPS, NODE_META, money,
@@ -53,6 +53,19 @@ function transientVisual(interventionId, index, completed) {
         kind: 'carrier', phase: 'onboarding', label: 'Team-driver Tanker 27',
         detail: 'Writing carrier and ETA into SAP', fromNodeId: 'supplier_oils_fats_regional',
         toNodeId: 'inventory_sugar_oils_receiving',
+      };
+  }
+  if (interventionId === 'prioritize_longmont_oil_allocation' && index === 0) {
+    return completed
+      ? {
+        kind: 'allocation', phase: 'routed', label: 'Protected Oil Allocation',
+        detail: 'Priority oil flow committed', fromNodeId: 'inventory_sugar_oils_receiving',
+        toNodeId: 'processing_fruit_spread_network',
+      }
+      : {
+        kind: 'allocation', phase: 'onboarding', label: 'Protected Oil Allocation',
+        detail: 'Calculating protected order demand', fromNodeId: 'inventory_sugar_oils_receiving',
+        toNodeId: 'processing_fruit_spread_network',
       };
   }
   return null;
@@ -204,7 +217,6 @@ export function renderAct(view, ctx) {
         graph.clearAgentAction();
         graph.showTransientIntervention(processingVisual);
       } else {
-        graph.clearTransientIntervention();
         graph.showAgentAction(step[0], step[1], '', 'processing');
       }
       update.innerHTML = `<b>AI AGENT SCHEDULING · ${step[1]}</b><span>Connecting to ${step[1]} at ${NODE_META[step[0]]?.name || step[0]}…</span>`;
@@ -228,7 +240,8 @@ export function renderAct(view, ctx) {
         for (const nodeId of event.affected_model_objects?.nodes || []) graph.setNodeHealth(nodeId, 'good');
         for (const edgeId of event.affected_model_objects?.relationships || []) graph.setEdgeState(edgeId, 'flow');
         graph.clearEdgeAlert();
-        graph.clearTransientIntervention();
+        graph.clearAgentAction();
+        graph.finalizeTransientIntervention();
         update.innerHTML = '<b>INTERVENTION SCHEDULED</b><span>All enterprise actions are committed. The disrupted supply chain has recovered to green.</span>';
         button.disabled = false;
         button.dataset.mode = 'summary';

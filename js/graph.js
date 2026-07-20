@@ -186,6 +186,7 @@ export function renderGraph(container, opts = {}) {
   let compareMap = null; // nodeId -> metric -> {bau, worst, pct, day} (worst-in-window vs BAU)
   let nodeCostMap = null; // nodeId -> { cost, total }
   let edgeAlert = null;
+  let interventionNodeIds = new Set();
 
   function alertSectionHtml(nodeId) {
     const evIds = activeAlerts[nodeId] || [];
@@ -553,15 +554,19 @@ export function renderGraph(container, opts = {}) {
       const target = pos[toNodeId];
       if (!target) return;
       const source = fromNodeId ? pos[fromNodeId] : null;
-      const virtual = kind === 'carrier' && source
+      for (const nodeId of interventionNodeIds) nodeEls[nodeId]?.classList.remove('intervention-linked');
+      interventionNodeIds = new Set([fromNodeId, toNodeId].filter(Boolean));
+      for (const nodeId of interventionNodeIds) nodeEls[nodeId]?.classList.add('intervention-linked');
+
+      const virtual = source
         ? {
           x: (source.x + target.x) / 2,
-          y: Math.max(120, (source.y + target.y) / 2 - 76),
+          y: Math.max(115, (source.y + target.y) / 2 - (kind === 'carrier' ? 112 : 54)),
           r: 23,
         }
         : {
-          x: target.x + 100,
-          y: VB_H - 40,
+          x: Math.max(COL_X[0] + 70, target.x - 118),
+          y: Math.max(150, target.y - 72),
           r: 23,
         };
       if (fromNodeId && pos[fromNodeId]) {
@@ -576,19 +581,25 @@ export function renderGraph(container, opts = {}) {
       const group = svgEl('g', {
         class: `transient-node ${kind} ${phase}`, transform: `translate(${virtual.x} ${virtual.y})`,
       });
-      const panelY = kind === 'supplier' ? -96 : -34;
       const halo = svgEl('circle', { r: 34, class: 'transient-node-halo' });
       const ring = svgEl('circle', { r: 23, class: 'transient-node-ring' });
       const dot = svgEl('circle', { r: 6, class: 'transient-node-dot' });
-      const panel = svgEl('rect', { x: 35, y: panelY, width: 285, height: 68, rx: 10, class: 'transient-node-panel' });
-      const kicker = svgEl('text', { x: 51, y: panelY + 22, class: 'transient-node-kicker' });
+      const badge = svgEl('rect', { x: -73, y: -56, width: 146, height: 23, rx: 11.5, class: 'transient-node-panel' });
+      const kicker = svgEl('text', { x: 0, y: -41, class: 'transient-node-kicker', 'text-anchor': 'middle' });
       kicker.textContent = phase === 'searching' ? 'AI AGENT SEARCH'
         : phase === 'onboarding' ? 'SAP ONBOARDING' : 'ALTERNATE ROUTE';
-      const title = svgEl('text', { x: 51, y: panelY + 43, class: 'transient-node-title' });
-      title.textContent = label;
-      const status = svgEl('text', { x: 51, y: panelY + 60, class: 'transient-node-status' });
+      const title = svgEl('text', { x: 0, y: 42, class: 'transient-node-title', 'text-anchor': 'middle' });
+      const titleParts = label.replace('Emergency Oil Supplier', 'Emergency Oil|Supplier')
+        .replace('Team-driver Tanker', 'Team-driver|Tanker')
+        .replace('Protected Oil Allocation', 'Protected Oil|Allocation').split('|');
+      titleParts.forEach((part, index) => {
+        const line = svgEl('tspan', { x: 0, dy: index ? 15 : 0 });
+        line.textContent = part;
+        title.appendChild(line);
+      });
+      const status = svgEl('text', { x: 0, y: titleParts.length > 1 ? 78 : 62, class: 'transient-node-status', 'text-anchor': 'middle' });
       status.textContent = detail;
-      group.append(halo, ring, dot, panel, kicker, title, status);
+      group.append(halo, ring, dot, badge, kicker, title, status);
       if (phase === 'searching') {
         group.append(
           svgEl('circle', { cx: -48, cy: -18, r: 7, class: 'transient-candidate one' }),
@@ -598,7 +609,23 @@ export function renderGraph(container, opts = {}) {
       }
       gTransient.appendChild(group);
     },
-    clearTransientIntervention() { gTransient.replaceChildren(); },
+    finalizeTransientIntervention() {
+      gTransient.querySelectorAll('.transient-route').forEach(route => {
+        route.classList.remove('searching', 'onboarding', 'selected', 'routed');
+        route.classList.add('committed');
+      });
+      const group = gTransient.querySelector('.transient-node');
+      if (!group) return;
+      group.classList.remove('searching', 'onboarding', 'selected', 'routed');
+      group.classList.add('committed');
+      const kicker = group.querySelector('.transient-node-kicker');
+      if (kicker) kicker.textContent = 'INTERVENTION ACTIVE';
+    },
+    clearTransientIntervention() {
+      gTransient.replaceChildren();
+      for (const nodeId of interventionNodeIds) nodeEls[nodeId]?.classList.remove('intervention-linked');
+      interventionNodeIds.clear();
+    },
     pulseNode(nodeId) {
       const g = nodeEls[nodeId];
       if (!g) return;
