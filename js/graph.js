@@ -130,6 +130,7 @@ export function renderGraph(container, opts = {}) {
     const name = svgEl('text', { y: p.r + 15, class: 'node-name', 'text-anchor': 'middle' });
     const displayName = NODE_META[node.id]?.name ?? node.id;
     const nameLines = (() => {
+      if (p.col === 0) return [displayName];
       if (node.id === 'plant_longmont_frozen_sandwich') return ['Longmont', 'Uncrustables Plant'];
       for (const suffix of [' Raw Material', ' Finished Goods', ' Supplier 01', ' Supplier 02', ' Supplier 03', ' Supplier 04', ' Supplier 05', ' Supplier 06', ' Supplier 07', ' Supplier 08', ' Supplier 09', ' Supplier 10']) {
         if (displayName.endsWith(suffix)) return [displayName.slice(0, -suffix.length), suffix.trim()];
@@ -568,7 +569,7 @@ export function renderGraph(container, opts = {}) {
           r: 23,
         }
         : {
-          x: Math.max(COL_X[0] + 70, target.x - 118),
+          x: Math.max(COL_X[0] + 70, target.x - 103),
           y: Math.max(150, target.y - 72),
           r: 23,
         };
@@ -587,14 +588,16 @@ export function renderGraph(container, opts = {}) {
       const halo = svgEl('circle', { r: 34, class: 'transient-node-halo' });
       const ring = svgEl('circle', { r: 23, class: 'transient-node-ring' });
       const dot = svgEl('circle', { r: 6, class: 'transient-node-dot' });
-      const badge = svgEl('rect', { x: -73, y: -56, width: 146, height: 23, rx: 11.5, class: 'transient-node-panel' });
+      const badge = svgEl('rect', { x: -42, y: -56, width: 84, height: 23, rx: 11.5, class: 'transient-node-panel' });
       const kicker = svgEl('text', { x: 0, y: -41, class: 'transient-node-kicker', 'text-anchor': 'middle' });
-      kicker.textContent = phase === 'searching' ? 'SEARCHING ALTERNATES'
-        : phase === 'selected' ? 'ALTERNATE SELECTED'
-          : phase === 'onboarding' ? 'ONBOARDING ALTERNATE'
-            : phase === 'routed' ? 'ALTERNATE COMMITTED' : 'INTERVENTION ROUTE';
+      kicker.textContent = phase === 'searching' ? 'SEARCHING'
+        : phase === 'selected' ? 'ALT SELECTED'
+          : phase === 'onboarding' ? 'ONBOARDING'
+            : phase === 'routed' ? 'ROUTE COMMITTED' : 'INTERVENTION';
       const title = svgEl('text', { x: 0, y: 42, class: 'transient-node-title', 'text-anchor': 'middle' });
-      const titleParts = label.replace('Emergency Oil Supplier', 'Emergency Oil|Supplier')
+      const titleParts = label.replace('Qualified oil supplier search', 'Oil supplier|search')
+        .replace('Team-driver service search', 'Team-driver|search')
+        .replace('Emergency Oil Supplier', 'Emergency Oil|Supplier')
         .replace('Team-driver Tanker', 'Team-driver|Tanker')
         .replace('Protected Oil Allocation', 'Protected Oil|Allocation').split('|');
       titleParts.forEach((part, index) => {
@@ -607,9 +610,9 @@ export function renderGraph(container, opts = {}) {
       group.append(halo, ring, dot, badge, kicker, title, status);
       if (phase === 'searching') {
         group.append(
-          svgEl('circle', { cx: -48, cy: -18, r: 7, class: 'transient-candidate one' }),
-          svgEl('circle', { cx: -48, cy: 18, r: 7, class: 'transient-candidate two' }),
-          svgEl('circle', { cx: -70, cy: 0, r: 7, class: 'transient-candidate three' }),
+          svgEl('circle', { cx: -31, cy: -17, r: 6, class: 'transient-candidate one' }),
+          svgEl('circle', { cx: -31, cy: 17, r: 6, class: 'transient-candidate two' }),
+          svgEl('circle', { cx: 31, cy: 0, r: 6, class: 'transient-candidate three' }),
         );
       }
       gTransient.appendChild(group);

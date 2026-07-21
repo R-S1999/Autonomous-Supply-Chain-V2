@@ -736,9 +736,9 @@ table.iv-table { width: 100%; border-collapse: collapse; }
 .transient-node.committed .transient-node-halo{stroke:#00a98f;opacity:.55}
 @keyframes transientHalo{50%{r:40;opacity:.08}}
 .transient-node-panel{fill:rgba(18,32,58,.97);stroke:rgba(101,221,200,.55);stroke-width:1.5}
-.transient-node-kicker{fill:#73ddcb;font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:1.2px}
-.transient-node-title{fill:var(--navy-deep);font-family:var(--display);font-size:13px;font-weight:800}
-.transient-node-status{fill:#657187;font-size:8.5px;font-weight:600}
+.transient-node-kicker{fill:#73ddcb;font-family:var(--mono);font-size:7.5px;font-weight:800;letter-spacing:.55px}
+.transient-node-title{fill:var(--navy-deep);font-family:var(--display);font-size:11.5px;font-weight:800}
+.transient-node-status{fill:#657187;font-size:8px;font-weight:700;letter-spacing:.35px}
 .transient-candidate{fill:#fff;stroke:var(--amber);stroke-width:3;animation:transientCandidate 1s ease infinite}
 .transient-candidate.two{animation-delay:.18s}.transient-candidate.three{animation-delay:.36s}
 @keyframes transientCandidate{50%{opacity:.25}}

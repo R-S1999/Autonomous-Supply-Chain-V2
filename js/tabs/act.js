@@ -1,4 +1,4 @@
-import { renderGraph } from '../graph.js?v=experience23';
+import { renderGraph } from '../graph.js?v=experience26';
 import {
   EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_TITLES,
   INTERVENTION_AGENT_STEPS, NODE_META, money,
@@ -15,43 +15,43 @@ function transientVisual(interventionId, index, completed) {
     if (index === 0) return completed
       ? {
         kind: 'supplier', phase: 'selected', label: 'Emergency Oil Supplier 14',
-        detail: 'Qualified lot selected for tomorrow', toNodeId: 'inventory_sugar_oils_receiving',
+        detail: 'SUPPLIER 14', toNodeId: 'inventory_sugar_oils_receiving',
       }
       : {
         kind: 'supplier', phase: 'searching', label: 'Qualified oil supplier search',
-        detail: 'Comparing lots and delivery times', toNodeId: 'inventory_sugar_oils_receiving',
+        detail: '3 OPTIONS', toNodeId: 'inventory_sugar_oils_receiving',
       };
     if (index === 1) return completed
       ? {
         kind: 'supplier', phase: 'routed', label: 'Emergency Oil Supplier 14',
-        detail: 'SAP vendor and emergency route committed', toNodeId: 'inventory_sugar_oils_receiving',
+        detail: 'ROUTE READY', toNodeId: 'inventory_sugar_oils_receiving',
       }
       : {
         kind: 'supplier', phase: 'onboarding', label: 'Emergency Oil Supplier 14',
-        detail: 'Creating SAP vendor and purchase order', toNodeId: 'inventory_sugar_oils_receiving',
+        detail: 'SAP SETUP', toNodeId: 'inventory_sugar_oils_receiving',
       };
   }
   if (interventionId === 'expedite_delayed_oil_tanker') {
     if (index === 0) return completed
       ? {
         kind: 'carrier', phase: 'selected', label: 'Team-driver Tanker 27',
-        detail: 'Fastest qualified service selected', fromNodeId: 'supplier_oils_fats_regional',
+        detail: 'TANKER 27', fromNodeId: 'supplier_oils_fats_regional',
         toNodeId: 'inventory_sugar_oils_receiving',
       }
       : {
         kind: 'carrier', phase: 'searching', label: 'Team-driver service search',
-        detail: 'Comparing capacity and recovery time', fromNodeId: 'supplier_oils_fats_regional',
+        detail: '3 SERVICES', fromNodeId: 'supplier_oils_fats_regional',
         toNodeId: 'inventory_sugar_oils_receiving',
       };
     if (index === 1) return completed
       ? {
         kind: 'carrier', phase: 'routed', label: 'Team-driver Tanker 27',
-        detail: 'Alternate tanker route committed', fromNodeId: 'supplier_oils_fats_regional',
+        detail: 'ROUTE READY', fromNodeId: 'supplier_oils_fats_regional',
         toNodeId: 'inventory_sugar_oils_receiving',
       }
       : {
         kind: 'carrier', phase: 'onboarding', label: 'Team-driver Tanker 27',
-        detail: 'Writing carrier and ETA into SAP', fromNodeId: 'supplier_oils_fats_regional',
+        detail: 'SAP SETUP', fromNodeId: 'supplier_oils_fats_regional',
         toNodeId: 'inventory_sugar_oils_receiving',
       };
   }
