@@ -12,7 +12,10 @@ const COL_X = [85, 290, 495, 700, 905, 1110, 1330];
 const COL_R = [18, 20, 22, 26, 20, 22, 23];
 const BOUNDARY_X = 1218;
 const NS = 'http://www.w3.org/2000/svg';
-const HIDDEN_NODE_IDS = new Set(['supplier_film_wrap_converter']);
+const HIDDEN_NODE_IDS = new Set([
+  'supplier_film_wrap_converter',
+  'supplier_fruit_midwest_fast_response',
+]);
 
 function svgEl(tag, attrs = {}) {
   const el = document.createElementNS(NS, tag);
@@ -561,7 +564,7 @@ export function renderGraph(container, opts = {}) {
       const virtual = source
         ? {
           x: (source.x + target.x) / 2,
-          y: Math.max(115, (source.y + target.y) / 2 - (kind === 'carrier' ? 112 : 54)),
+          y: Math.max(115, (source.y + target.y) / 2 - (kind === 'carrier' ? 66 : 54)),
           r: 23,
         }
         : {
@@ -586,8 +589,10 @@ export function renderGraph(container, opts = {}) {
       const dot = svgEl('circle', { r: 6, class: 'transient-node-dot' });
       const badge = svgEl('rect', { x: -73, y: -56, width: 146, height: 23, rx: 11.5, class: 'transient-node-panel' });
       const kicker = svgEl('text', { x: 0, y: -41, class: 'transient-node-kicker', 'text-anchor': 'middle' });
-      kicker.textContent = phase === 'searching' ? 'AI AGENT SEARCH'
-        : phase === 'onboarding' ? 'SAP ONBOARDING' : 'ALTERNATE ROUTE';
+      kicker.textContent = phase === 'searching' ? 'SEARCHING ALTERNATES'
+        : phase === 'selected' ? 'ALTERNATE SELECTED'
+          : phase === 'onboarding' ? 'ONBOARDING ALTERNATE'
+            : phase === 'routed' ? 'ALTERNATE COMMITTED' : 'INTERVENTION ROUTE';
       const title = svgEl('text', { x: 0, y: 42, class: 'transient-node-title', 'text-anchor': 'middle' });
       const titleParts = label.replace('Emergency Oil Supplier', 'Emergency Oil|Supplier')
         .replace('Team-driver Tanker', 'Team-driver|Tanker')

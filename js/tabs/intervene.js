@@ -1,7 +1,7 @@
 import {
   EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_TITLES,
   INTERVENTION_AGENT_STEPS, INTERVENTION_NODES, NODE_META, money,
-} from '../model.js?v=experience11';
+} from '../model.js?v=experience23';
 import { runBau, runScenario } from '../engine.js?v=costledger';
 
 function agentPlan(interventionId) {

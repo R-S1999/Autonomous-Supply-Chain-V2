@@ -393,15 +393,15 @@ export const INTERVENTION_TITLES = {
 /* Enterprise-system execution sequence shared by Decide and Act. */
 export const INTERVENTION_AGENT_STEPS = {
   expedite_delayed_oil_tanker: [
-    ['supplier_oils_fats_regional', 'TMS', 'Search team-driver tanker services and award the fastest qualified route.'],
-    ['inventory_sugar_oils_receiving', 'SAP', 'Commit the new carrier and recovered arrival time to the oil purchase order.'],
+    ['supplier_oils_fats_regional', 'TMS', 'Search available alternate team-driver tanker services by capacity and recovery time.'],
+    ['inventory_sugar_oils_receiving', 'SAP', 'Select the fastest qualified alternate, then commit its carrier and recovered arrival time.'],
     ['processing_fruit_spread_network', 'APS', 'Reschedule Fruit Spread Plant batches against the expedited arrival.'],
     ['plant_longmont_frozen_sandwich', 'MES', 'Schedule the recovered Longmont Uncrustables production sequence.'],
     ['retailer_costco', 'OMS', "Publish the recovered Costco and Sam's Club commitment times."],
   ],
   source_emergency_oil_supply: [
-    ['supplier_oils_fats_regional', 'SRM', 'Search qualified emergency oil suppliers and select the best-fit available lot.'],
-    ['inventory_sugar_oils_receiving', 'SAP', 'Onboard the selected supplier and release the emergency oil purchase order.'],
+    ['supplier_oils_fats_regional', 'SRM', 'Search qualified alternate oil suppliers by available lot, quality status and delivery time.'],
+    ['inventory_sugar_oils_receiving', 'SAP', 'Select Emergency Oil Supplier 14, onboard it, and release the emergency purchase order.'],
     ['processing_fruit_spread_network', 'QMS', 'Approve the alternate oil lot before it enters the production schedule.'],
     ['plant_longmont_frozen_sandwich', 'MES', 'Schedule receiving and full Longmont Uncrustables production recovery.'],
     ['retailer_sams_club', 'OMS', "Publish recovered Costco and Sam's Club fulfillment dates."],

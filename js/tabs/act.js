@@ -1,8 +1,8 @@
-import { renderGraph } from '../graph.js?v=experience18';
+import { renderGraph } from '../graph.js?v=experience23';
 import {
   EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_TITLES,
   INTERVENTION_AGENT_STEPS, NODE_META, money,
-} from '../model.js?v=experience11';
+} from '../model.js?v=experience23';
 import { runBau, runScenario } from '../engine.js?v=costledger';
 import { disruptionSummary } from '../scenario.js?v=experience11';
 
@@ -67,6 +67,33 @@ function transientVisual(interventionId, index, completed) {
         detail: 'Calculating protected order demand', fromNodeId: 'inventory_sugar_oils_receiving',
         toNodeId: 'processing_fruit_spread_network',
       };
+  }
+  return null;
+}
+
+function alternateNotification(interventionId, index, completed, visual) {
+  if (!visual || !['source_emergency_oil_supply', 'expedite_delayed_oil_tanker'].includes(interventionId)) return null;
+  if (index === 0) {
+    if (completed) return {
+      tone: 'selected', title: 'ALTERNATE SELECTED',
+      message: `${visual.label} selected. The AI Agent is preparing onboarding and route commitment.`,
+    };
+    return {
+      tone: 'searching', title: 'AI AGENT SEARCHING FOR ALTERNATES',
+      message: interventionId === 'source_emergency_oil_supply'
+        ? 'Scanning qualified oil suppliers for available lots, quality approval and delivery time.'
+        : 'Scanning qualified team-driver tanker services for capacity and fastest recovery time.',
+    };
+  }
+  if (index === 1) {
+    if (completed) return {
+      tone: 'selected', title: 'ALTERNATE COMMITTED',
+      message: `${visual.label} is onboarded and its alternate route is committed in SAP.`,
+    };
+    return {
+      tone: 'onboarding', title: 'ONBOARDING SELECTED ALTERNATE',
+      message: `Connecting ${visual.label} to SAP and committing the recovered arrival.`,
+    };
   }
   return null;
 }
@@ -206,33 +233,41 @@ export function renderAct(view, ctx) {
     steps.forEach((step, index) => timers.push(setTimeout(() => {
       const element = line.querySelector(`[data-i="${index}"]`);
       const status = element.querySelector('span');
+      const processingVisual = transientVisual(intervention.id, index, false);
+      const processingNotice = alternateNotification(intervention.id, index, false, processingVisual);
       element.classList.add('active');
-      status.textContent = 'SCHEDULING ENTERPRISE ACTION';
+      status.textContent = processingNotice?.title || 'SCHEDULING ENTERPRISE ACTION';
       if (index) line.querySelector(`[data-i="${index - 1}"]`)?.classList.replace('active', 'done');
       dot.style.top = `${index * (100 / Math.max(1, steps.length - 1))}%`;
       graph.setAgentBadge(step[0]);
       graph.pulseNode(step[0]);
-      const processingVisual = transientVisual(intervention.id, index, false);
       if (processingVisual) {
         graph.clearAgentAction();
         graph.showTransientIntervention(processingVisual);
       } else {
         graph.showAgentAction(step[0], step[1], '', 'processing');
       }
-      update.innerHTML = `<b>AI AGENT SCHEDULING · ${step[1]}</b><span>Connecting to ${step[1]} at ${NODE_META[step[0]]?.name || step[0]}…</span>`;
+      update.className = `agent-update ${processingNotice?.tone || ''}`.trim();
+      update.innerHTML = processingNotice
+        ? `<b>${processingNotice.title}</b><span>${processingNotice.message}</span>`
+        : `<b>AI AGENT SCHEDULING · ${step[1]}</b><span>Connecting to ${step[1]} at ${NODE_META[step[0]]?.name || step[0]}…</span>`;
 
       timers.push(setTimeout(() => {
         const actionSource = generatedByAgent ? 'AI AGENT' : 'FALLBACK';
-        status.textContent = `${actionSource} ACTION SCHEDULED`;
         graph.setNodeHealth(step[0], 'good');
         const completedVisual = transientVisual(intervention.id, index, true);
+        const completedNotice = alternateNotification(intervention.id, index, true, completedVisual);
+        status.textContent = completedNotice?.title || `${actionSource} ACTION SCHEDULED`;
         if (completedVisual) {
           graph.clearAgentAction();
           graph.showTransientIntervention(completedVisual);
         } else {
           graph.showAgentAction(step[0], step[1], step[2], 'revealed', actionSource);
         }
-        update.innerHTML = `<b>${step[1]} ACTION SCHEDULED</b><span>${NODE_META[step[0]]?.name || step[0]} is recovering. The generated action remains visible before the next step.</span>`;
+        update.className = `agent-update ${completedNotice?.tone || ''}`.trim();
+        update.innerHTML = completedNotice
+          ? `<b>${completedNotice.title}</b><span>${completedNotice.message}</span>`
+          : `<b>${step[1]} ACTION SCHEDULED</b><span>${NODE_META[step[0]]?.name || step[0]} is recovering. The generated action remains visible before the next step.</span>`;
       }, PROCESSING_MS));
 
       if (index === steps.length - 1) timers.push(setTimeout(() => {
@@ -242,6 +277,7 @@ export function renderAct(view, ctx) {
         graph.clearEdgeAlert();
         graph.clearAgentAction();
         graph.finalizeTransientIntervention();
+        update.className = 'agent-update complete';
         update.innerHTML = '<b>INTERVENTION SCHEDULED</b><span>All enterprise actions are committed. The disrupted supply chain has recovered to green.</span>';
         button.disabled = false;
         button.dataset.mode = 'summary';
@@ -263,6 +299,7 @@ export function renderAct(view, ctx) {
     view.querySelector('#act-desc').textContent = INTERVENTION_PROPOSALS[intervention.id];
     source.textContent = 'INTERVENTION SCHEDULED · AI AGENT PREPARING';
     source.className = 'agent-source generating';
+    update.className = 'agent-update';
     update.innerHTML = '<b>PREPARING SCHEDULE</b><span>Creating enterprise-system actions for the selected intervention…</span>';
     button.disabled = true;
     button.dataset.mode = 'run';
@@ -282,6 +319,7 @@ export function renderAct(view, ctx) {
       source.className = 'agent-source fallback';
     }
     renderSteps(steps);
+    update.className = 'agent-update';
     update.innerHTML = '<b>TIME TO ACT</b><span>Enterprise connections validated. Beginning the scheduled intervention.</span>';
     animate(intervention, steps, generatedByAgent);
   }
