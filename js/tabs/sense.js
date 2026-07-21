@@ -1,4 +1,4 @@
-import { renderGraph } from '../graph.js?v=experience26';
+import { renderGraph } from '../graph.js?v=experience27';
 import { TimelinePlayer } from '../sim.js';
 import { EVENTS, ALERT_META, money } from '../model.js?v=experience11';
 import { runBau, runScenario } from '../engine.js?v=costledger';

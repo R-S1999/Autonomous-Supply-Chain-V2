@@ -627,7 +627,7 @@ export function renderGraph(container, opts = {}) {
       group.classList.remove('searching', 'onboarding', 'selected', 'routed');
       group.classList.add('committed');
       const kicker = group.querySelector('.transient-node-kicker');
-      if (kicker) kicker.textContent = 'INTERVENTION ACTIVE';
+      if (kicker) kicker.textContent = 'ROUTE ACTIVE';
     },
     clearTransientIntervention() {
       gTransient.replaceChildren();

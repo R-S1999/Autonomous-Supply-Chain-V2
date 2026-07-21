@@ -1,4 +1,4 @@
-import { renderGraph } from '../graph.js?v=experience26';
+import { renderGraph } from '../graph.js?v=experience27';
 import {
   EVENTS, ALERT_META, INTERVENTION_PROPOSALS, INTERVENTION_TITLES,
   INTERVENTION_AGENT_STEPS, NODE_META, money,
