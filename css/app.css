@@ -18,8 +18,8 @@
   --line: #e4e8ef;
   --muted: #8a94a6;
   --sans: "Aptos", "Inter", "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
-  --display: "Aptos Display", "Segoe UI Variable Display", "Segoe UI", Arial, sans-serif;
-  --mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+  --display: "Manrope", "Aptos Display", "Segoe UI Variable Display", "Segoe UI", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
 /* Focused Longmont simulation */
@@ -969,3 +969,32 @@ h1,h2,h3,.brand-title,.cost-main,.decision-metrics b,.recovery-option h2,.recove
   .node-lift-name b{font-size:9.3px}
   .node-lift-values b{font-size:11px}
 }
+
+/* Manrope gives every page and simulation title a clear, contemporary hierarchy. */
+.brand-title,
+.scenario-titlebar b,
+.sense-discovery h1,
+.sense-alert-card h1,
+.recovery-head h1,
+.recovery-option h2,
+.recovery-outcome b,
+.decide-summary h1,
+.decision-card h2,
+.agent-head h2,
+.summary-v2-head h1,
+.summary-v2-method h2,
+.summary-service-panel header h2,
+.node-lift-block header h2,
+.node-name,
+.transient-node-title{
+  font-family:var(--display);
+  font-weight:700;
+  letter-spacing:-.015em;
+}
+.scenario-titlebar b,.col-title{
+  font-family:var(--display);
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.brand-title{font-weight:800;letter-spacing:.11em}
+.node-name{font-weight:700;letter-spacing:-.01em}
